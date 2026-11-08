@@ -1,0 +1,1301 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Aura Rush · Vitesse</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --r: .8; }
+  html, body { background:#070912; }
+  body { color:#e5e7eb; font-family:'Inter',system-ui,sans-serif; min-height:100vh; overflow-x:hidden; }
+  .font-display { font-family:'Orbitron','Inter',sans-serif; letter-spacing:.04em; }
+
+  #fx-grid { position:fixed; inset:0; pointer-events:none;
+    background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:42px 42px; mask-image:radial-gradient(ellipse at center,#000 30%,transparent 80%); }
+  #fx-gold { position:fixed; inset:0; pointer-events:none; opacity:var(--r); transition:opacity 1s;
+    background:radial-gradient(ellipse at 20% -10%,rgba(250,204,21,.28),transparent 60%),
+               radial-gradient(ellipse at 100% 100%,rgba(34,211,238,.16),transparent 55%),
+               radial-gradient(ellipse at 0% 100%,rgba(244,114,182,.14),transparent 50%); }
+  #fx-dark { position:fixed; inset:0; pointer-events:none; opacity:calc((1 - var(--r)) * .95); transition:opacity 1s;
+    background:radial-gradient(ellipse at center,rgba(20,0,30,.3),rgba(0,0,0,.9)); }
+  #flash { position:fixed; inset:0; pointer-events:none; opacity:0; z-index:40; }
+  #flash.bad  { animation:flashBad .7s ease-out; }
+  #flash.good { animation:flashGood .8s ease-out; }
+  @keyframes flashBad  { 0%{opacity:.5;background:#dc2626} 100%{opacity:0;background:#dc2626} }
+  @keyframes flashGood { 0%{opacity:.25;background:#fde047} 100%{opacity:0;background:#fde047} }
+
+  .panel { background:rgba(13,16,32,.82); border:1px solid rgba(255,255,255,.08); border-radius:22px; backdrop-filter:blur(8px); }
+  .panel-aura { border-color:rgba(250,204,21,calc(.10 + .5 * var(--r)));
+    box-shadow:0 0 calc(44px * var(--r)) rgba(250,204,21,calc(.25 * var(--r))), inset 0 1px 0 rgba(255,255,255,.05);
+    transition:box-shadow 1s, border-color 1s; }
+  #stage { transition:filter 1s; }
+  .neon-title { background:linear-gradient(90deg,#fde047,#f59e0b,#f472b6,#22d3ee); -webkit-background-clip:text; background-clip:text; color:transparent;
+    filter:drop-shadow(0 0 18px rgba(250,204,21,.35)); }
+
+  .btn-main { font-family:'Orbitron',sans-serif; font-weight:800; letter-spacing:.06em; padding:.9rem 1.6rem; border-radius:14px; color:#0b0b14;
+    background:linear-gradient(135deg,#fde047,#f59e0b); box-shadow:0 0 22px rgba(250,204,21,.45); transition:transform .12s, box-shadow .2s; }
+  .btn-main:hover { transform:translateY(-2px); box-shadow:0 0 34px rgba(250,204,21,.7); }
+  .btn-ghost { font-weight:700; padding:.65rem 1.1rem; border-radius:12px; border:1px solid rgba(255,255,255,.18); background:rgba(255,255,255,.04); }
+  .btn-ghost:hover { background:rgba(255,255,255,.1); }
+  .btn-cyan { font-weight:800; padding:.55rem 1rem; border-radius:12px; color:#04121a; background:linear-gradient(135deg,#67e8f9,#22d3ee); box-shadow:0 0 14px rgba(34,211,238,.4); }
+  .btn-cyan:hover { filter:brightness(1.1); }
+  .btn-cyan:disabled { opacity:.4; }
+  .lvl-card { border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:.8rem 1rem; text-align:left; background:rgba(255,255,255,.03); }
+  .lvl-card:hover { background:rgba(255,255,255,.07); }
+  .lvl-card.sel { border-color:#fde047; background:rgba(250,204,21,.09); box-shadow:0 0 18px rgba(250,204,21,.25); }
+  .sw { width:2.1rem; height:2.1rem; border-radius:999px; border:3px solid rgba(255,255,255,.12); transition:transform .12s; }
+  .sw.sel { border-color:#fff; transform:scale(1.15); box-shadow:0 0 12px rgba(255,255,255,.5); }
+  .hs-btn { padding:.4rem .7rem; border-radius:10px; font-weight:700; font-size:.85rem; border:1px solid rgba(255,255,255,.14); background:rgba(255,255,255,.04); }
+  .hs-btn.sel { border-color:#22d3ee; background:rgba(34,211,238,.15); color:#67e8f9; }
+
+  /* ===== Personnage ===== */
+  .char-host { position:relative; width:100%; aspect-ratio:200/260; }
+  .char-host svg { width:100%; height:100%; overflow:visible; transition:filter .8s; }
+  .ch .aura-wrap { transition:transform .8s, opacity .8s; }
+  .ch .aura-boost { transform-box:view-box; transform-origin:100px 200px; }
+  .powerup .ch .aura-boost { animation:boost 1.1s ease-out; }
+  @keyframes boost { 0%{transform:scale(1)} 30%{transform:scale(1.4)} 100%{transform:scale(1)} }
+  .ch .ring { transform-box:fill-box; transform-origin:center; opacity:0; }
+  .powerup .ch .ring { animation:ring 1s ease-out; }
+  .powerup .ch .ring2 { animation-delay:.18s; }
+  @keyframes ring { 0%{transform:scale(.3);opacity:1} 100%{transform:scale(2.4);opacity:0} }
+  .ch .fl { transform-box:view-box; transform-origin:100px 252px; animation:flick 1.2s ease-in-out infinite; }
+  .ch .fl-b { animation-duration:.9s; animation-delay:-.3s; }
+  .ch .fl-c { animation-duration:1.5s; animation-delay:-.7s; }
+  @keyframes flick { 0%,100%{transform:scale(1,1)} 50%{transform:scale(1.06,1.14)} }
+  .ch .glow { transform-box:fill-box; transform-origin:center; animation:breathe 2.4s ease-in-out infinite; }
+  @keyframes breathe { 50%{transform:scale(1.08)} }
+  .ch .spark { transform-box:fill-box; transform-origin:center; animation:twinkle 1.6s ease-in-out infinite; }
+  @keyframes twinkle { 0%,100%{transform:scale(.2);opacity:0} 50%{transform:scale(1.2);opacity:1} }
+  .ch .ember { transform-box:fill-box; animation:rise 2.2s linear infinite; }
+  @keyframes rise { 0%{transform:translateY(0);opacity:0} 15%{opacity:1} 100%{transform:translateY(-190px);opacity:0} }
+  .ch .bodyg { transform-box:view-box; transform-origin:100px 250px; animation:bob 2.4s ease-in-out infinite; transition:transform .6s; }
+  @keyframes bob { 50%{transform:translateY(-3px)} }
+  .ch.m-fire .bodyg, .ch.m-happy .bodyg { animation:hype .55s ease-in-out infinite; }
+  @keyframes hype { 50%{transform:translateY(-6px)} }
+  .ch.m-sad .bodyg { animation:none; transform:translateY(7px) scaleY(.96); }
+  .ch .head { transform-box:view-box; transform-origin:100px 138px; transition:transform .6s; }
+  .ch.m-sad .head { transform:translateY(4px) rotate(-6deg); }
+  .ch.m-worried .head { transform:rotate(-3deg); }
+  .ch .rain line { animation:rain .7s linear infinite; }
+  .ch .rain line:nth-child(2){animation-delay:-.2s} .ch .rain line:nth-child(3){animation-delay:-.45s} .ch .rain line:nth-child(4){animation-delay:-.6s}
+  @keyframes rain { from{transform:translateY(-4px);opacity:1} to{transform:translateY(16px);opacity:0} }
+  .ch .cloud { transition:opacity .6s; }
+  .ch .neg ellipse { transform-box:fill-box; transform-origin:center; animation:smoke 3s ease-in-out infinite; }
+  .ch .neg ellipse:nth-child(2){animation-delay:-1s} .ch .neg ellipse:nth-child(3){animation-delay:-2s}
+  @keyframes smoke { 50%{transform:scale(1.15) translateY(-8px);opacity:.45} }
+  .ch.rainbow .st1 { animation:rb 3s linear infinite; }
+  .ch.rainbow .st2 { animation:rb 3s linear infinite reverse; }
+  @keyframes rb { 0%{stop-color:#fde047} 33%{stop-color:#f472b6} 66%{stop-color:#22d3ee} 100%{stop-color:#fde047} }
+  .char-host.jump svg { animation:jump .5s ease-out; }
+  @keyframes jump { 30%{transform:translateY(-14px) scale(1.04)} }
+  .char-host.hit svg { animation:hit .45s; }
+  @keyframes hit { 20%{transform:translateX(-8px)} 40%{transform:translateX(7px)} 60%{transform:translateX(-4px)} }
+  .bubble { position:absolute; left:50%; top:-6px; transform:translateX(-50%); z-index:5; white-space:nowrap; text-align:center;
+    font-weight:800; font-size:.92rem; padding:.45rem .8rem; border-radius:14px; background:#fff; color:#0b0b14; box-shadow:0 6px 18px rgba(0,0,0,.4);
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s; }
+  .bubble::after { content:''; position:absolute; left:50%; bottom:-7px; transform:translateX(-50%); border:7px solid transparent; border-top-color:#fff; border-bottom:0; }
+  .bubble.on { opacity:1; transform:translateX(-50%) translateY(-6px); }
+  .bubble.bad { background:#fecaca; } .bubble.bad::after { border-top-color:#fecaca; }
+  .bubble.good { background:#fef08a; } .bubble.good::after { border-top-color:#fef08a; }
+
+  /* ===== HUD ===== */
+  .aura-big { font-family:'Orbitron',sans-serif; font-weight:900; font-size:2.6rem; line-height:1; }
+  .tier-badge { display:inline-block; font-family:'Orbitron',sans-serif; font-size:.72rem; font-weight:800; letter-spacing:.12em; padding:.25rem .65rem; border-radius:999px; color:#0b0b14; }
+  .bar-track { position:relative; height:12px; border-radius:999px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .bar-fill { height:100%; border-radius:999px; transition:width .9s cubic-bezier(.2,.9,.2,1.1), background .6s; }
+  .aura-pop { position:absolute; left:50%; top:40%; transform:translateX(-50%); font-family:'Orbitron',sans-serif; font-weight:900; font-size:2.2rem; z-index:6;
+    text-shadow:0 0 18px currentColor, 0 3px 0 #000; animation:popUp 1.5s ease-out forwards; pointer-events:none; white-space:nowrap; }
+  @keyframes popUp { 0%{opacity:0;transform:translate(-50%,10px) scale(.6)} 15%{opacity:1;transform:translate(-50%,0) scale(1.25)} 100%{opacity:0;transform:translate(-50%,-60px) scale(1)} }
+  .stat { padding:.45rem .7rem; border-radius:14px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.07); text-align:center; }
+  .stat-l { font-size:.62rem; text-transform:uppercase; letter-spacing:.14em; color:#94a3b8; }
+  .stat-v { font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.2rem; color:#fff; }
+  .lvl-tag { font-family:'Orbitron',sans-serif; font-weight:800; font-size:.75rem; letter-spacing:.1em; padding:.3rem .7rem; border-radius:999px; border:1px solid currentColor; }
+  .clock { font-family:'Orbitron',sans-serif; font-weight:900; font-size:1.6rem; padding:.2rem .8rem; border-radius:12px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); }
+  .clock.urgent { color:#f87171; border-color:#f87171; animation:urg 1s ease-in-out infinite; }
+  @keyframes urg { 50%{box-shadow:0 0 20px rgba(248,113,113,.7); transform:scale(1.06)} }
+  .dot { width:10px; height:10px; border-radius:999px; background:rgba(255,255,255,.12); }
+  .dot.ok { background:#facc15; box-shadow:0 0 8px #facc15; } .dot.mid { background:#38bdf8; }
+
+  /* ===== Question guidée ===== */
+  .formula-chip { font-family:'Orbitron',sans-serif; font-weight:800; font-size:.8rem; padding:.3rem .7rem; border-radius:10px; background:rgba(34,211,238,.1); color:#67e8f9; border:1px solid rgba(34,211,238,.35); }
+  .hl-d { color:#7dd3fc; background:rgba(56,189,248,.16); border-bottom:3px solid #38bdf8; border-radius:6px; padding:0 4px; font-weight:800; }
+  .hl-t { color:#fdba74; background:rgba(251,146,60,.16); border-bottom:3px solid #fb923c; border-radius:6px; padding:0 4px; font-weight:800; }
+  .tok { cursor:pointer; border-radius:6px; padding:0 2px; transition:background .12s; border-bottom:2px dashed rgba(255,255,255,.18); }
+  .tok:hover { background:rgba(255,255,255,.14); }
+  .tok.bad { background:rgba(239,68,68,.35); }
+  .step { display:flex; gap:.8rem; padding:.8rem .9rem; border-radius:16px; border:1px solid rgba(255,255,255,.06); background:rgba(255,255,255,.02); transition:all .3s; }
+  .step.todo { opacity:.38; }
+  .step.active { border-color:rgba(34,211,238,.55); background:rgba(34,211,238,.06); box-shadow:0 0 22px rgba(34,211,238,.15); animation:popIn .3s ease-out; }
+  .step.done { border-color:rgba(34,197,94,.3); }
+  .step-num { flex:none; width:2rem; height:2rem; border-radius:999px; display:grid; place-items:center; font-family:'Orbitron',sans-serif; font-weight:900; font-size:.85rem; background:rgba(255,255,255,.08); }
+  .step.active .step-num { background:#22d3ee; color:#04121a; }
+  .step.done .step-num { background:#22c55e; color:#04120a; }
+  .step-title { font-weight:800; }
+  .step-main { flex:1; min-width:0; }
+  .chip { display:inline-block; padding:.35rem .7rem; border-radius:10px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); font-family:'Orbitron',sans-serif; font-weight:800; font-size:.9rem; }
+  .chip-d { border-color:rgba(56,189,248,.55); color:#7dd3fc; } .chip-t { border-color:rgba(251,146,60,.55); color:#fdba74; }
+  .mini-in { width:6.5rem; padding:.45rem .5rem; border-radius:10px; background:rgba(0,0,0,.45); border:2px solid rgba(255,255,255,.18); font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.05rem; color:#fff; outline:none; text-align:center; }
+  .mini-in:focus { border-color:#22d3ee; box-shadow:0 0 12px rgba(34,211,238,.35); }
+  .mini-in.in-d { border-color:rgba(56,189,248,.6); } .mini-in.in-t { border-color:rgba(251,146,60,.6); }
+  .op-btn { width:2.6rem; height:2.6rem; border-radius:10px; font-size:1.4rem; font-weight:900; border:2px solid rgba(255,255,255,.18); background:rgba(255,255,255,.04); }
+  .op-btn:hover { background:rgba(255,255,255,.1); }
+  .op-btn.sel { border-color:#fde047; background:rgba(250,204,21,.18); color:#fde047; }
+  .u { font-family:'Orbitron',sans-serif; font-weight:800; font-size:.9rem; }
+  .fb { border-radius:16px; padding:1rem 1.2rem; animation:popIn .35s ease-out; }
+  .fb-good { background:rgba(250,204,21,.1); border:1px solid rgba(250,204,21,.45); }
+  .fb-mid  { background:rgba(56,189,248,.08); border:1px solid rgba(56,189,248,.4); }
+  #qcard.glowup { animation:glowUp 1s ease-out; }
+  @keyframes glowUp { 25%{box-shadow:0 0 90px rgba(250,204,21,.9)} }
+  .shake { animation:shake .45s; }
+  @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-10px)} 40%{transform:translateX(9px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(4px)} }
+  @keyframes popIn { from{opacity:0;transform:translateY(8px) scale(.98)} to{opacity:1;transform:none} }
+  .particle { position:fixed; z-index:45; pointer-events:none; font-size:24px; animation:burst 1.05s ease-out forwards; }
+  @keyframes burst { from{transform:translate(-50%,-50%) scale(1);opacity:1} to{transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.4) rotate(160deg);opacity:0} }
+  .card-soft { border-radius:14px; padding:.9rem 1rem; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); }
+  .tbl td { padding:.3rem 1.2rem .3rem 0; vertical-align:middle; }
+  .tbl tr + tr td { border-top:1px solid rgba(255,255,255,.07); }
+  .help-lines div + div { margin-top:.15rem; }
+  .ladder-row { display:flex; justify-content:space-between; align-items:center; padding:.3rem .6rem; border-radius:10px; font-size:.85rem; }
+  .toast { position:fixed; left:50%; top:18px; transform:translateX(-50%); z-index:60; font-family:'Orbitron',sans-serif; font-weight:800; padding:.7rem 1.2rem; border-radius:14px; background:rgba(13,16,32,.95); border:1px solid rgba(255,255,255,.2); animation:popIn .3s ease-out; }
+  .timeup { position:fixed; inset:0; z-index:70; display:grid; place-items:center; background:rgba(0,0,0,.7); }
+  .timeup div { font-family:'Orbitron',sans-serif; font-weight:900; font-size:clamp(2.2rem,8vw,5rem); color:#fde047; text-shadow:0 0 30px #f59e0b; animation:popIn .4s ease-out; text-align:center; }
+
+  /* ===== Calculatrice ===== */
+  @media (min-width:1024px) and (max-width:1279px) { #calc { grid-column:2; } }
+  .calc-disp { font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.35rem; text-align:right; padding:.6rem .7rem; border-radius:10px; background:rgba(0,0,0,.5); border:1px solid rgba(255,255,255,.12); min-height:2.9rem; overflow-x:auto; white-space:nowrap; }
+  .ck { padding:.6rem 0; border-radius:10px; font-family:'Orbitron',sans-serif; font-weight:800; font-size:1.05rem; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.08); }
+  .ck:hover { background:rgba(255,255,255,.13); }
+  .ck.op { color:#fde047; } .ck.eq { background:rgba(250,204,21,.25); color:#fde047; } .ck.cl { color:#f87171; }
+  input[type=text] { color:#fff; }
+</style>
+</head>
+<body>
+<div id="fx-grid"></div><div id="fx-gold"></div><div id="fx-dark"></div><div id="flash"></div>
+<button id="btn-mute" class="fixed top-3 right-3 z-30 btn-ghost text-sm" title="Son">🔊</button>
+
+<main class="relative z-10 max-w-7xl mx-auto px-4 py-6 md:py-8">
+
+  <!-- ================= ACCUEIL ================= -->
+  <section id="screen-home" class="screen">
+    <div class="text-center mb-6">
+      <div class="text-xs md:text-sm tracking-[.35em] text-slate-400 uppercase">Physique-Chimie · 6ème</div>
+      <h1 class="font-display neon-title text-5xl md:text-7xl font-black mt-2">AURA RUSH</h1>
+      <p class="mt-3 text-lg text-slate-300">4 minutes pour calculer un max de <b class="text-white">vitesses</b> et faire exploser ton aura. <span class="formula-chip ml-1">v = d ÷ t</span></p>
+    </div>
+
+    <div class="grid lg:grid-cols-12 gap-5">
+      <div class="panel panel-aura p-5 lg:col-span-7">
+        <h2 class="font-display text-lg font-extrabold mb-4">👤 CRÉE TON PERSO</h2>
+        <div class="grid sm:grid-cols-[180px_1fr] gap-5 items-center">
+          <div id="home-char" class="char-host max-w-[180px] mx-auto"></div>
+          <div>
+            <label class="text-sm text-slate-400">Pseudo</label>
+            <div class="flex gap-2 mt-1">
+              <input id="in-name" type="text" maxlength="16" placeholder="Ton pseudo" class="flex-1 min-w-0 px-4 py-3 rounded-xl bg-black/40 border-2 border-white/10 focus:border-cyan-400 outline-none font-bold text-lg">
+              <button id="btn-dice" class="btn-ghost text-xl" title="Pseudo au hasard">🎲</button>
+            </div>
+            <div class="text-sm text-slate-400 mt-3">Coiffure</div><div id="hs-list" class="flex flex-wrap gap-1.5 mt-1"></div>
+            <div class="text-sm text-slate-400 mt-3">Couleur du sweat</div><div id="sw-hood" class="flex flex-wrap gap-2 mt-1"></div>
+            <div class="grid grid-cols-2 gap-3">
+              <div><div class="text-sm text-slate-400 mt-3">Peau</div><div id="sw-skin" class="flex flex-wrap gap-2 mt-1"></div></div>
+              <div><div class="text-sm text-slate-400 mt-3">Cheveux</div><div id="sw-hair" class="flex flex-wrap gap-2 mt-1"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="text-sm text-slate-400 mt-5">Niveau de départ</div>
+        <div id="levels" class="grid sm:grid-cols-3 gap-2 mt-1"></div>
+        <button id="btn-start" class="btn-main w-full mt-5 text-lg">LANCER UNE PARTIE DE 4 MIN ⏱</button>
+      </div>
+
+      <div class="lg:col-span-5 flex flex-col gap-5">
+        <div class="panel p-5">
+          <h2 class="font-display text-lg font-extrabold mb-3">📜 COMMENT GAGNER DE L'AURA</h2>
+          <ul class="space-y-2 text-[15px] text-slate-300">
+            <li>⏱ <b class="text-white">4 minutes</b> chrono : enchaîne un max de questions.</li>
+            <li>🟢 Tu pars de <b class="text-white">0 d'aura</b>, <b class="text-amber-300">sans limite</b>.</li>
+            <li>✅ Question réussie <b>sans faute</b> : tu gagnes les points du niveau, multipliés par ta <b>série 🔥</b> (jusqu'à 2 fois plus).</li>
+            <li>❌ Une erreur te fait perdre <b class="text-rose-400">300 d'aura</b> (puis 100 pour les suivantes). Ta série repart à 0.</li>
+            <li>💀 L'aura peut devenir <b>négative</b> !</li>
+            <li>📈 Tous les 3 questions, tu montes de niveau : les questions rapportent plus.</li>
+            <li>🧮 Calculatrice toujours dispo à côté de la question : le but, c'est la méthode !</li>
+          </ul>
+          <div class="text-xs uppercase tracking-widest text-slate-500 mt-4 mb-1">Les rangs</div>
+          <div id="home-ladder" class="grid grid-cols-2 gap-1"></div>
+          <div id="home-record" class="card-soft mt-4 text-sm"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= BRIEFING ================= -->
+  <section id="screen-brief" class="screen hidden">
+    <div class="panel panel-aura p-6 md:p-10 max-w-2xl mx-auto text-center" style="animation:popIn .4s ease-out">
+      <div id="brief-kicker" class="text-xs tracking-[.3em] uppercase text-slate-400">Briefing</div>
+      <h2 id="brief-title" class="font-display text-3xl md:text-4xl font-black mt-2"></h2>
+      <p id="brief-sub" class="text-slate-300 mt-1"></p>
+      <div id="brief-body" class="text-left mt-6 space-y-3"></div>
+      <button id="btn-brief-go" class="btn-main mt-8 text-lg">C'EST PARTI ➜</button>
+    </div>
+  </section>
+
+  <!-- ================= JEU ================= -->
+  <section id="screen-game" class="screen hidden">
+    <div class="grid lg:grid-cols-[260px_1fr] xl:grid-cols-[270px_1fr_250px] gap-5 items-start">
+      <aside class="panel panel-aura p-4 lg:sticky lg:top-4">
+        <div class="grid grid-cols-[130px_1fr] lg:grid-cols-1 gap-3 items-center">
+          <div class="relative pt-8">
+            <div id="bubble" class="bubble"></div>
+            <div id="g-char" class="char-host max-w-[220px] mx-auto"></div>
+            <div id="aura-pop-host" class="absolute inset-0 pointer-events-none"></div>
+          </div>
+          <div class="text-center">
+            <div id="hud-name" class="font-display font-extrabold text-lg truncate"></div>
+            <span id="hud-tier" class="tier-badge mt-1"></span>
+            <div class="mt-2"><span id="aura-val" class="aura-big">0</span> <span class="text-xs tracking-widest text-slate-400 font-bold">AURA</span></div>
+          </div>
+        </div>
+        <div class="mt-3">
+          <div class="flex justify-between text-xs text-slate-400 mb-1 gap-2"><span id="next-label"></span><span id="next-left" class="font-bold text-amber-300 whitespace-nowrap"></span></div>
+          <div class="bar-track"><div id="next-fill" class="bar-fill"></div></div>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <div class="stat"><div class="stat-l">Série</div><div id="hud-streak" class="stat-v">🔥0</div></div>
+          <div class="stat"><div class="stat-l">Réussies</div><div id="hud-done" class="stat-v">0</div></div>
+          <div class="stat"><div class="stat-l">Prochaine</div><div id="hud-next" class="stat-v text-amber-300">+100</div></div>
+        </div>
+      </aside>
+
+      <div id="stage">
+        <div class="flex flex-wrap gap-2 items-center justify-between mb-3 text-sm">
+          <span id="lvl-tag" class="lvl-tag"></span>
+          <div id="dots" class="flex flex-wrap gap-1.5 order-3 md:order-none w-full md:w-auto justify-center"></div>
+          <span id="clock" class="clock">4:00</span>
+        </div>
+        <div id="qcard" class="panel panel-aura p-5 md:p-7">
+          <div class="flex flex-wrap justify-between items-center gap-2 mb-3">
+            <span id="q-count" class="text-xs uppercase tracking-[.25em] text-slate-400">Question 1</span>
+            <span class="formula-chip">v = d ÷ t</span>
+          </div>
+          <p id="q-text" class="text-2xl md:text-3xl font-semibold leading-snug"></p>
+          <p id="q-ask" class="mt-2 text-lg text-slate-300"></p>
+          <div id="steps" class="mt-4 space-y-2"></div>
+          <div id="feedback" class="hidden mt-4"></div>
+          <div class="mt-4 text-right"><button id="btn-next" class="hidden btn-main">SUIVANT ➜</button></div>
+        </div>
+      </div>
+
+      <!-- Calculatrice toujours visible -->
+      <div id="calc" class="panel p-3 lg:sticky lg:top-4 w-full max-w-sm mx-auto" style="border-color:rgba(250,204,21,.4)">
+        <div class="font-display font-extrabold text-sm mb-2">🧮 CALCULATRICE</div>
+        <div id="calc-disp" class="calc-disp">0</div>
+        <div id="calc-keys" class="grid grid-cols-4 gap-1.5 mt-2">
+          <button class="ck cl" data-k="C">C</button><button class="ck" data-k="B">⌫</button><button class="ck op" data-k="÷">÷</button><button class="ck op" data-k="×">×</button>
+          <button class="ck" data-k="7">7</button><button class="ck" data-k="8">8</button><button class="ck" data-k="9">9</button><button class="ck op" data-k="−">−</button>
+          <button class="ck" data-k="4">4</button><button class="ck" data-k="5">5</button><button class="ck" data-k="6">6</button><button class="ck op" data-k="+">+</button>
+          <button class="ck" data-k="1">1</button><button class="ck" data-k="2">2</button><button class="ck" data-k="3">3</button><button class="ck" data-k=".">,</button>
+          <button class="ck col-span-2" data-k="0">0</button><button class="ck eq col-span-2" data-k="=">=</button>
+        </div>
+        <button id="calc-ins" class="btn-cyan w-full mt-2 text-sm">↵ Mettre le résultat dans la case</button>
+        <div class="text-xs text-slate-400 mt-2">Tape le calcul, appuie sur =, puis envoie le résultat dans la case active.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= FIN ================= -->
+  <section id="screen-end" class="screen hidden">
+    <div class="text-center mb-5">
+      <div class="text-xs tracking-[.35em] uppercase text-slate-400">Fin de la partie</div>
+      <h2 class="font-display neon-title text-4xl md:text-5xl font-black mt-2">TA CARTE D'AURA</h2>
+      <p class="text-slate-400 mt-2">Capture-la ou partage-la : qui aura le plus d'aura de la classe ? 😏</p>
+    </div>
+    <div class="max-w-md mx-auto">
+      <div id="end-record" class="text-center font-display font-extrabold mb-3"></div>
+      <div class="panel panel-aura p-2">
+        <img id="card-img" alt="Carte de résultat" class="w-full rounded-2xl block">
+        <div id="card-wait" class="text-center text-slate-400 py-24">Création de ta carte…</div>
+      </div>
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <a id="btn-dl" class="btn-cyan text-center" download="aura-rush.png">💾 Enregistrer l'image</a>
+        <button id="btn-share" class="btn-cyan hidden">📤 Partager</button>
+        <button id="btn-replay" class="btn-main col-span-2">REJOUER ↻</button>
+        <button id="btn-home" class="btn-ghost col-span-2">Changer de perso / niveau</button>
+      </div>
+      <div id="end-char" class="char-host" style="position:absolute;left:-9999px;width:200px"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+/* =========================================================
+   AURA RUSH · VITESSE — mini-jeu 6ème (v = d ÷ t)
+   ========================================================= */
+const $ = s => document.querySelector(s);
+const R = a => a[Math.floor(Math.random() * a.length)];
+const r3 = x => Math.round(x * 1000) / 1000;
+const fmt = n => Number(n).toLocaleString('fr-FR', { maximumFractionDigits: 3 });
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+function parseNum(s) {
+  s = String(s).trim().replace(/[\s  ]/g, '').replace(',', '.');
+  if (!/^-?(\d+(\.\d*)?|\.\d+)$/.test(s)) return NaN;
+  return parseFloat(s);
+}
+const close = (a, b) => Math.abs(a - b) <= Math.max(0.011, Math.abs(b) * 0.005);
+const isInt = x => Math.abs(x - Math.round(x)) < 1e-9;
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+
+/* ---------- Réglages ---------- */
+const GAME_MS = 4 * 60 * 1000;      // durée d'une partie
+const PER_LEVEL = 3;                 // questions avant de monter de niveau
+const BASE = { 1: 100, 2: 150, 3: 200 };
+const LEVELS = {
+  1: { name: 'NIVEAU 1 · ÉCHAUFFEMENT', sub: 'Valeurs entières en km/h', color: '#22d3ee' },
+  2: { name: 'NIVEAU 2 · ÇA SE CORSE', sub: 'Décimaux, minutes et heures', color: '#a78bfa' },
+  3: { name: 'NIVEAU 3 · MODE PRO', sub: 'Mètres par seconde et conversions', color: '#f472b6' },
+};
+const TIERS = [
+  { min: -Infinity, name: 'AURA NÉGATIVE', icon: '💀', a1: '#7c3aed', a2: '#020617', bg: 'linear-gradient(90deg,#7c3aed,#1e1b4b)' },
+  { min: 0,    name: 'PNJ',            icon: '🫥', a1: '#94a3b8', a2: '#475569', bg: 'linear-gradient(90deg,#94a3b8,#64748b)' },
+  { min: 500,  name: 'STYLÉ',          icon: '😏', a1: '#22d3ee', a2: '#0ea5e9', bg: 'linear-gradient(90deg,#67e8f9,#0ea5e9)' },
+  { min: 1500, name: 'MAIN CHARACTER', icon: '⭐', a1: '#a78bfa', a2: '#22d3ee', bg: 'linear-gradient(90deg,#c4b5fd,#22d3ee)' },
+  { min: 3000, name: 'LÉGENDE',        icon: '👑', a1: '#fde047', a2: '#f59e0b', bg: 'linear-gradient(90deg,#fde047,#f59e0b)' },
+  { min: 4500, name: 'MYTHIQUE',       icon: '🐉', a1: '#f472b6', a2: '#fde047', bg: 'linear-gradient(90deg,#f9a8d4,#fde047)' },
+  { min: 6000, name: 'AURA INFINIE',   icon: '♾️', a1: '#fde047', a2: '#22d3ee', rainbow: 1, bg: 'linear-gradient(90deg,#fde047,#f472b6,#22d3ee)' },
+];
+const tierIdx = a => { let i = 0; TIERS.forEach((t, k) => { if (a >= t.min) i = k; }); return i; };
+const tierOf = a => TIERS[tierIdx(a)];
+
+const HOODS = ['#3b82f6', '#ef4444', '#22c55e', '#f97316', '#eab308', '#a855f7', '#ec4899', '#1f2937', '#e2e8f0'];
+const SKINS = ['#fbd9bd', '#eab48a', '#c68642', '#8d5524', '#5c3a1e'];
+const HAIRS = ['#1f2937', '#5b3a1e', '#a16207', '#e5b93b', '#b91c1c', '#e2e8f0'];
+const HAIRSTYLES = [['court', 'Court'], ['pics', 'Pics'], ['casquette', 'Casquette'], ['rase', 'Rasé'], ['afro', 'Bouclé'], ['long', 'Long'], ['couettes', 'Couettes']];
+
+/* =========================================================
+   PERSONNAGE (SVG original, animé selon l'aura et l'humeur)
+   ========================================================= */
+let charSeq = 0;
+function charSVG() {
+  const p = 'c' + (charSeq++);
+  const flame = 'M100,8 C84,40 60,36 56,70 C36,86 48,118 34,148 C22,190 42,244 100,252 C158,244 178,190 166,148 C152,118 164,86 144,70 C140,36 116,40 100,8Z';
+  const star = 'M0,-7 L1.6,-1.6 L7,0 L1.6,1.6 L0,7 L-1.6,1.6 L-7,0 L-1.6,-1.6Z';
+  const embers = [[50, 230, 0], [150, 225, -.7], [70, 210, -1.4], [132, 240, -1.9], [100, 235, -1.1], [38, 200, -.4], [165, 205, -1.6]]
+    .map(([x, y, d]) => `<circle class="ember" cx="${x}" cy="${y}" r="3.2" style="fill:var(--a1);animation-delay:${d}s"/>`).join('');
+  return `
+<svg class="ch m-neutral" viewBox="0 0 200 260" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="${p}g" cx="50%" cy="58%" r="55%">
+      <stop offset="0%" class="st1" style="stop-color:var(--a1);stop-opacity:.95"/>
+      <stop offset="55%" class="st2" style="stop-color:var(--a2);stop-opacity:.4"/>
+      <stop offset="100%" style="stop-color:var(--a2);stop-opacity:0"/>
+    </radialGradient>
+    <linearGradient id="${p}f" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0%" class="st1" style="stop-color:var(--a1);stop-opacity:1"/>
+      <stop offset="70%" class="st2" style="stop-color:var(--a2);stop-opacity:.6"/>
+      <stop offset="100%" style="stop-color:var(--a2);stop-opacity:0"/>
+    </linearGradient>
+    <filter id="${p}b" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="4"/></filter>
+    <filter id="${p}s" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="9"/></filter>
+  </defs>
+  <g class="neg" filter="url(#${p}s)">
+    <ellipse cx="70" cy="190" rx="40" ry="50" fill="#3b0764" opacity=".75"/>
+    <ellipse cx="130" cy="180" rx="42" ry="55" fill="#1e1b4b" opacity=".8"/>
+    <ellipse cx="100" cy="120" rx="50" ry="45" fill="#2e1065" opacity=".6"/>
+  </g>
+  <g class="aura-boost">
+    <g class="aura-wrap">
+      <ellipse class="glow" cx="100" cy="150" rx="98" ry="112" fill="url(#${p}g)"/>
+      <g class="flames" filter="url(#${p}b)">
+        <g transform="translate(100 252) scale(1.18 1.12) translate(-100 -252)"><path class="fl fl-c" d="${flame}" fill="url(#${p}f)" opacity=".5"/></g>
+        <path class="fl fl-a" d="${flame}" fill="url(#${p}f)" opacity=".85"/>
+        <g transform="translate(100 252) scale(.84 .8) translate(-100 -252)"><path class="fl fl-b" d="${flame}" fill="url(#${p}f)" opacity=".9"/></g>
+      </g>
+      <g class="sparks" fill="#fff">
+        <g transform="translate(36 70)"><path class="spark" d="${star}"/></g>
+        <g transform="translate(168 96)"><path class="spark" d="${star}" style="animation-delay:-.5s"/></g>
+        <g transform="translate(24 170)"><path class="spark" d="${star}" style="animation-delay:-1s"/></g>
+        <g transform="translate(176 190)"><path class="spark" d="${star}" style="animation-delay:-.8s"/></g>
+        <g transform="translate(150 34)"><path class="spark" d="${star}" style="animation-delay:-1.3s"/></g>
+        <g transform="translate(52 28)"><path class="spark" d="${star}" style="animation-delay:-.2s"/></g>
+      </g>
+    </g>
+    <g class="embers">${embers}</g>
+    <circle class="ring" cx="100" cy="150" r="70" fill="none" style="stroke:var(--a1)" stroke-width="6"/>
+    <circle class="ring ring2" cx="100" cy="150" r="70" fill="none" style="stroke:var(--a2)" stroke-width="4"/>
+  </g>
+  <g class="bodyg">
+    <rect x="77" y="206" width="20" height="38" rx="8" fill="#1e293b"/>
+    <rect x="103" y="206" width="20" height="38" rx="8" fill="#1e293b"/>
+    <ellipse cx="85" cy="246" rx="15" ry="7" fill="#f8fafc"/><ellipse cx="115" cy="246" rx="15" ry="7" fill="#f8fafc"/>
+    <path d="M71,247 h28" stroke="var(--hood)" stroke-width="3" stroke-linecap="round"/><path d="M101,247 h28" stroke="var(--hood)" stroke-width="3" stroke-linecap="round"/>
+    <g data-arms="down">
+      <path d="M66,152 C52,166 49,188 52,204" stroke="var(--hood)" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <path d="M134,152 C148,166 151,188 148,204" stroke="var(--hood)" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <circle cx="52" cy="208" r="8.5" fill="var(--skin)"/><circle cx="148" cy="208" r="8.5" fill="var(--skin)"/>
+    </g>
+    <g data-arms="up">
+      <path d="M68,150 C54,136 46,116 44,98" stroke="var(--hood)" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <path d="M132,150 C146,136 154,116 156,98" stroke="var(--hood)" stroke-width="16" stroke-linecap="round" fill="none"/>
+      <circle cx="44" cy="92" r="8.5" fill="var(--skin)"/><circle cx="156" cy="92" r="8.5" fill="var(--skin)"/>
+    </g>
+    <path d="M62,214 C58,172 70,140 100,138 C130,140 142,172 138,214 Z" fill="var(--hood)"/>
+    <path d="M80,188 h40 v14 a5 5 0 0 1 -5 5 h-30 a5 5 0 0 1 -5 -5z" fill="rgba(0,0,0,.2)"/>
+    <path d="M93,146 v18 M107,146 v18" stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85"/>
+    <path d="M86,172 l14,-8 l14,8 l-14,8z" fill="rgba(255,255,255,.85)"/>
+    <ellipse cx="100" cy="136" rx="40" ry="14" fill="var(--hood)"/>
+    <ellipse cx="100" cy="136" rx="40" ry="14" fill="rgba(0,0,0,.25)"/>
+    <path data-hs-b="long" d="M60,96 C55,130 60,152 68,158 L132,158 C140,152 145,130 140,96 Z" fill="var(--hair)"/>
+    <g class="head">
+      <circle cx="64" cy="103" r="7" fill="var(--skin)"/><circle cx="136" cy="103" r="7" fill="var(--skin)"/>
+      <g data-hs-b="couettes" fill="var(--hair)"><circle cx="54" cy="96" r="12"/><circle cx="146" cy="96" r="12"/></g>
+      <circle cx="100" cy="100" r="37" fill="var(--skin)"/>
+      <path data-hs="court" d="M62,98 C58,66 80,55 100,55 C122,55 142,66 138,98 C134,86 127,80 119,77 L115,84 L109,76 C100,78 92,77 86,78 L82,85 L77,80 C69,84 64,90 62,98Z" fill="var(--hair)"/>
+      <path data-hs="pics" d="M62,98 L57,70 L71,74 L69,51 L85,62 L94,40 L104,59 L119,43 L122,64 L141,57 L138,98 C132,84 118,76 100,76 C82,76 68,84 62,98Z" fill="var(--hair)"/>
+      <path data-hs="rase" d="M64,94 C62,66 82,58 100,58 C118,58 138,66 136,94 C128,82 114,77 100,77 C86,77 72,82 64,94Z" fill="var(--hair)" opacity=".8"/>
+      <path data-hs="afro" d="M58,100 C42,84 50,54 70,50 C76,34 100,28 114,38 C132,32 152,48 148,66 C158,80 152,98 142,102 C136,86 120,78 100,78 C80,78 64,86 58,100Z" fill="var(--hair)"/>
+      <path data-hs="long" d="M62,104 C56,66 80,54 100,54 C120,54 144,66 138,104 C134,88 124,78 112,76 C104,84 90,86 80,80 C72,86 66,94 62,104Z" fill="var(--hair)"/>
+      <path data-hs="couettes" d="M62,100 C58,64 82,55 100,55 C118,55 142,64 138,100 C134,86 124,78 104,76 L100,82 L96,76 C80,78 66,86 62,100Z" fill="var(--hair)"/>
+      <g data-hs="casquette">
+        <path d="M63,98 L62,84 L70,84 Z M137,98 L138,84 L130,84 Z" fill="var(--hair)"/>
+        <path d="M63,82 C61,50 139,50 137,82 Q100,73 63,82Z" fill="var(--hood)"/>
+        <path d="M63,82 C61,50 139,50 137,82 Q100,73 63,82Z" fill="rgba(255,255,255,.12)"/>
+        <path d="M63,82 Q100,73 137,82 L137,86 Q100,77 63,86Z" fill="rgba(0,0,0,.35)"/>
+        <path d="M98,78 Q132,72 160,81 Q158,88 146,89 Q122,83 98,84Z" fill="var(--hood)"/>
+        <path d="M98,78 Q132,72 160,81 Q158,88 146,89 Q122,83 98,84Z" fill="rgba(0,0,0,.25)"/>
+        <circle cx="100" cy="54" r="3" fill="rgba(0,0,0,.3)"/>
+      </g>
+      <path class="brow bl" d="M78,86 Q86,81 94,86" stroke="var(--brow)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <path class="brow br" d="M106,86 Q114,81 122,86" stroke="var(--brow)" stroke-width="4.5" stroke-linecap="round" fill="none"/>
+      <g data-eyes="normal">
+        <ellipse cx="86" cy="100" rx="4.6" ry="6" fill="#0f172a"/><ellipse cx="114" cy="100" rx="4.6" ry="6" fill="#0f172a"/>
+        <circle cx="87.6" cy="97.6" r="1.6" fill="#fff"/><circle cx="115.6" cy="97.6" r="1.6" fill="#fff"/>
+      </g>
+      <g data-eyes="happy" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round">
+        <path d="M80,102 Q86,94 92,102"/><path d="M108,102 Q114,94 120,102"/>
+      </g>
+      <g data-eyes="sad">
+        <ellipse cx="86" cy="103" rx="4.5" ry="5" fill="#0f172a"/><ellipse cx="114" cy="103" rx="4.5" ry="5" fill="#0f172a"/>
+        <path d="M83,110 Q80,117 83,119 Q86,117 83,110Z" fill="#60a5fa"/>
+      </g>
+      <g data-eyes="cool">
+        <path d="M73,93 h25 v6 a9 9 0 0 1 -9 9 h-7 a9 9 0 0 1 -9 -9z" fill="#0b0b14"/>
+        <path d="M102,93 h25 v6 a9 9 0 0 1 -9 9 h-7 a9 9 0 0 1 -9 -9z" fill="#0b0b14"/>
+        <path d="M97,96 h6" stroke="#0b0b14" stroke-width="3"/>
+        <path d="M78,97 l7,0 M107,97 l7,0" stroke="#fff" stroke-width="2" opacity=".55" stroke-linecap="round"/>
+      </g>
+      <path d="M99,104 Q97,110 101,111" stroke="rgba(0,0,0,.25)" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path data-mouth="smile" d="M90,118 Q100,125 110,118" stroke="#5b2410" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <g data-mouth="grin"><path d="M86,115 H114 Q112,130 100,130 Q88,130 86,115Z" fill="#5b2410"/><path d="M88,116 H112 V119.5 H88Z" fill="#fff"/></g>
+      <path data-mouth="flat" d="M91,121 H109" stroke="#5b2410" stroke-width="3.5" stroke-linecap="round"/>
+      <path data-mouth="frown" d="M90,125 Q100,116 110,125" stroke="#5b2410" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+      <path data-sweat="1" d="M140,80 Q134,90 140,94 Q146,90 140,80Z" fill="#7dd3fc"/>
+    </g>
+  </g>
+  <g class="cloud">
+    <g class="rain" stroke="#60a5fa" stroke-width="3" stroke-linecap="round">
+      <line x1="76" y1="44" x2="73" y2="52"/><line x1="96" y1="46" x2="93" y2="54"/><line x1="116" y1="46" x2="113" y2="54"/><line x1="134" y1="44" x2="131" y2="52"/>
+    </g>
+    <rect x="62" y="22" width="86" height="18" rx="9" fill="#475569"/>
+    <ellipse cx="84" cy="22" rx="22" ry="15" fill="#64748b"/><ellipse cx="112" cy="18" rx="24" ry="18" fill="#64748b"/><ellipse cx="134" cy="26" rx="16" ry="12" fill="#475569"/>
+  </g>
+</svg>`;
+}
+const MOODS = {
+  fire:    { eyes: 'cool',   mouth: 'grin',  arms: 'up',   sweat: 0, brow: 'det' },
+  happy:   { eyes: 'happy',  mouth: 'grin',  arms: 'up',   sweat: 0, brow: 'up' },
+  neutral: { eyes: 'normal', mouth: 'smile', arms: 'down', sweat: 0, brow: 'norm' },
+  focus:   { eyes: 'normal', mouth: 'flat',  arms: 'down', sweat: 0, brow: 'det' },
+  worried: { eyes: 'normal', mouth: 'flat',  arms: 'down', sweat: 1, brow: 'sad' },
+  sad:     { eyes: 'sad',    mouth: 'frown', arms: 'down', sweat: 1, brow: 'sad' },
+};
+const BROWS = {
+  norm: ['M78,86 Q86,81 94,86', 'M106,86 Q114,81 122,86'],
+  up:   ['M78,83 Q86,76 94,83', 'M106,83 Q114,76 122,83'],
+  det:  ['M78,83 Q86,84 94,89', 'M106,89 Q114,84 122,83'],
+  sad:  ['M78,90 Q86,86 94,82', 'M106,82 Q114,86 122,90'],
+};
+function mountChar(host) { host.innerHTML = charSVG(); return host; }
+/* Intensité de l'aura : grandit en continu avec le score (0 → 5000+) */
+function setChar(host, o) {
+  const svg = host.querySelector('svg'); if (!svg) return;
+  const m = MOODS[o.mood] || MOODS.neutral, t = tierOf(o.aura), neg = o.aura < 0;
+  const I = neg ? 0 : Math.min(1, o.aura / 5000);
+  svg.style.setProperty('--hood', o.hood); svg.style.setProperty('--skin', o.skin);
+  svg.style.setProperty('--hair', o.hair); svg.style.setProperty('--brow', o.hair === '#e2e8f0' ? '#94a3b8' : o.hair);
+  svg.style.setProperty('--a1', t.a1); svg.style.setProperty('--a2', t.a2);
+  svg.setAttribute('class', `ch m-${o.mood}${t.rainbow ? ' rainbow' : ''}`);
+  const k = o.mood === 'sad' ? .3 : o.mood === 'worried' ? .7 : o.mood === 'fire' ? 1.3 : 1;
+  const wrap = svg.querySelector('.aura-wrap');
+  wrap.style.transformOrigin = '100px 252px'; wrap.style.transformBox = 'view-box';
+  wrap.style.opacity = neg ? 0 : Math.min(1, (0.3 + 0.7 * I) * k);
+  wrap.style.transform = `scale(${(0.72 + 0.6 * I + (o.mood === 'fire' ? .08 : 0)).toFixed(3)})`;
+  svg.querySelector('.flames').style.display = !neg && (o.aura >= 500 || o.mood === 'fire') ? '' : 'none';
+  svg.querySelector('.embers').style.display = !neg && (o.aura >= 1500 || o.mood === 'fire') && o.mood !== 'sad' ? '' : 'none';
+  svg.querySelector('.sparks').style.display = !neg && (o.aura >= 3000 || o.mood === 'fire') ? '' : 'none';
+  svg.querySelector('.neg').style.display = neg ? '' : 'none';
+  svg.querySelector('.cloud').style.opacity = (o.mood === 'sad' || neg) ? 1 : 0;
+  svg.querySelectorAll('[data-eyes]').forEach(g => g.style.display = g.dataset.eyes === m.eyes ? '' : 'none');
+  svg.querySelectorAll('[data-mouth]').forEach(g => g.style.display = g.dataset.mouth === m.mouth ? '' : 'none');
+  svg.querySelectorAll('[data-arms]').forEach(g => g.style.display = g.dataset.arms === m.arms ? '' : 'none');
+  svg.querySelectorAll('[data-hs]').forEach(g => g.style.display = g.dataset.hs === o.hs ? '' : 'none');
+  svg.querySelectorAll('[data-hs-b]').forEach(g => g.style.display = g.dataset.hsB === o.hs ? '' : 'none');
+  svg.querySelector('[data-sweat]').style.display = m.sweat ? '' : 'none';
+  svg.querySelector('.bl').setAttribute('d', BROWS[m.brow][0]); svg.querySelector('.br').setAttribute('d', BROWS[m.brow][1]);
+  const glow = neg ? 'drop-shadow(0 0 10px #7c3aed)' : `drop-shadow(0 0 ${(3 + 22 * I).toFixed(0)}px ${t.a1})`;
+  svg.style.filter = glow + (o.mood === 'sad' ? ' saturate(.45) brightness(.85)' : '');
+}
+function charAnim(host, cls) { host.classList.remove(cls); void host.offsetWidth; host.classList.add(cls); setTimeout(() => host.classList.remove(cls), 1200); }
+
+/* =========================================================
+   QUESTIONS — contextes et formulations variées
+   ========================================================= */
+const CTX1 = [
+  { who: 'Un cycliste', verb: 'parcourt', v: [15, 18, 20, 24, 25, 30] },
+  { who: 'Une voiture', verb: 'roule sur', v: [60, 70, 80, 90, 100, 110], veh: 1 },
+  { who: 'Un TGV', verb: 'parcourt', v: [200, 240, 260, 280, 300], veh: 1 },
+  { who: 'Une coureuse', verb: 'court', v: [9, 10, 11, 12] },
+  { who: 'Un bateau', verb: 'navigue sur', v: [20, 25, 30, 35], veh: 1 },
+  { who: 'Un scooter', verb: 'parcourt', v: [30, 35, 40, 45] },
+  { who: 'Un car scolaire', verb: 'parcourt', v: [50, 60, 70], veh: 1 },
+  { who: 'Un camion', verb: 'roule sur', v: [70, 80, 90], veh: 1 },
+];
+const CTX2 = [
+  { who: 'Un cycliste', verb: 'parcourt', v: [16, 20, 24, 30, 40] },
+  { who: 'Une voiture', verb: 'roule sur', v: [60, 80, 90, 100, 120], veh: 1 },
+  { who: 'Un TGV', verb: 'parcourt', v: [240, 280, 300, 320], veh: 1 },
+  { who: 'Un scooter', verb: 'parcourt', v: [30, 40, 45, 48] },
+  { who: 'Un bateau', verb: 'navigue sur', v: [20, 24, 30, 36], veh: 1 },
+  { who: 'Une coureuse', verb: 'court', v: [10, 12, 15] },
+  { who: 'Un car scolaire', verb: 'parcourt', v: [50, 60, 80], veh: 1 },
+];
+const CTX2DEC = [
+  { who: 'Un randonneur', verb: 'marche', v: [3.5, 4.2, 4.5, 5.5] },
+  { who: 'Une nageuse', verb: 'nage', v: [2.5, 3.5] },
+  { who: 'Une rolleuse', verb: 'parcourt', v: [12.5, 14.5, 15.5] },
+  { who: 'Un kayakiste', verb: 'pagaie sur', v: [6.5, 7.5] },
+];
+const MIN_OPTS = [
+  { m: 30, k: 2 }, { m: 15, k: 4 }, { m: 45, k: 4 }, { m: 12, k: 5 }, { m: 6, k: 10 },
+  { m: 90, k: 2, txt: '1 h 30 min' }, { m: 150, k: 2, txt: '2 h 30 min' },
+];
+const CTX3A = [
+  { who: 'Un sprinteur', verb: 'court', p: [[100, 10], [200, 25], [400, 50], [200, 20]] },
+  { who: 'Une nageuse', verb: 'nage', p: [[50, 25], [100, 50], [200, 100]] },
+  { who: 'Un guépard', verb: 'sprinte sur', p: [[300, 10], [150, 5], [500, 20]] },
+  { who: 'Une trottinette électrique', verb: 'parcourt', p: [[300, 60], [600, 120], [480, 80]] },
+  { who: 'Un drone', verb: 'vole sur', p: [[450, 30], [600, 40], [360, 20]] },
+];
+const CTX3B = [
+  { who: 'Un cycliste', verb: 'parcourt', v: 18 }, { who: 'Un scooter', verb: 'parcourt', v: 36 },
+  { who: 'Un bus', verb: 'parcourt', v: 54, veh: 1 }, { who: 'Une voiture', verb: 'roule sur', v: 72, veh: 1 },
+  { who: 'Une voiture', verb: 'roule sur', v: 90, veh: 1 }, { who: 'Une moto', verb: 'parcourt', v: 108 },
+];
+const CTX3C = [
+  { who: 'Un cycliste', verb: 'parcourt', v: [5, 10] }, { who: 'Un skateur', verb: 'parcourt', v: [5] },
+  { who: 'Une voiture', verb: 'roule sur', v: [15, 20, 25], veh: 1 }, { who: 'Un train', verb: 'parcourt', v: [25, 30], veh: 1 },
+];
+const CTX3D = [
+  { who: 'Une coureuse', verb: 'court', v: 4 }, { who: 'Un cycliste', verb: 'parcourt', v: 5 },
+  { who: 'Un scooter', verb: 'parcourt', v: 10 }, { who: 'Une voiture', verb: 'roule sur', v: 20, veh: 1 },
+];
+
+/* Formulations : la distance et le temps changent de place, avec parfois un piège */
+const D = { k: 'D' }, T = { k: 'T' };
+const TEMPLATES = [
+  c => [`${c.Who} ${c.verb} `, D, ` en `, T, `.`],
+  c => [`En `, T, `, ${c.who} ${c.verb} `, D, `.`],
+  c => [`${c.Who} met `, T, ` pour parcourir `, D, `.`],
+  c => [`Il faut `, T, ` à ${c.who} pour parcourir `, D, `.`],
+  c => [`Pendant `, T, `, ${c.who} ${c.verb} `, D, ` sans s'arrêter.`],
+  c => [`Un trajet de `, D, ` a duré `, T, ` pour ${c.who}.`],
+  c => [`${c.Who} part à `, { k: 'H', t: `${R([7, 8, 9, 10, 14, 15])} h` }, ` et ${c.verb} `, D, `. Le trajet dure `, T, `.`],
+  c => [`${c.Who} démarre à `, { k: 'H', t: `${R([8, 9, 13, 16])} h ${R([10, 20, 40])}` }, `. ${c.Pro} met `, T, ` pour faire `, D, `.`],
+  c => c.veh ? [`${c.Who} transporte `, { k: 'N', t: `${R([3, 4, 12, 25, 48])} passagers` }, `. ${c.Pro} ${c.verb} `, D, ` en `, T, `.`] : null,
+  c => c.veh ? [`Le compteur ${c.who.replace(/^une /, "d'une ").replace(/^un /, "d'un ")} indique `, D, ` parcourus après `, T, ` de trajet.`] : null,
+  c => [`Distance parcourue par ${c.who} : `, D, `. Durée du trajet : `, T, `.`],
+];
+const ASKS = [
+  a => `Calcule sa <b class="text-white">vitesse moyenne</b> en <b class="text-amber-300">${a}</b>.`,
+  a => `Quelle est sa <b class="text-white">vitesse moyenne</b>, en <b class="text-amber-300">${a}</b> ?`,
+  a => `Trouve sa <b class="text-white">vitesse moyenne</b> (en <b class="text-amber-300">${a}</b>).`,
+];
+const lines = (...a) => `<div class="help-lines">${a.map(x => `<div>${x}</div>`).join('')}</div>`;
+let lastTpl = -1;
+function mk(o, c) {
+  o.D.text = o.D.text || `${fmt(o.D.val)} ${o.D.unit}`;
+  o.T.text = o.T.text || `${fmt(o.T.val)} ${o.T.unit}`;
+  o.conversions = o.conversions || []; o.post = o.post || null;
+  const ctx = { Who: c.who, who: c.who[0].toLowerCase() + c.who.slice(1), verb: c.verb, Pro: c.who.startsWith('Une') ? 'Elle' : 'Il', veh: c.veh };
+  let parts = null, i;
+  while (!parts) { i = Math.floor(Math.random() * TEMPLATES.length); if (i !== lastTpl) parts = TEMPLATES[i](ctx); }
+  lastTpl = i;
+  o.parts = parts.map(p => p === D ? { k: 'D', t: o.D.text } : p === T ? { k: 'T', t: o.T.text } : p);
+  o.askHTML = R(ASKS)(o.ask);
+  const vals = [o.D.val, o.T.val, o.answer, o.division.num, o.division.den, o.division.res, ...o.conversions.map(x => x.ans)];
+  o.calc = !!o.post || vals.some(v => !isInt(v));
+  return o;
+}
+function genL1() {
+  const c = R(CTX1), v = R(c.v), t = R([2, 3, 4, 5]), d = v * t;
+  return mk({ level: 1, D: { val: d, unit: 'km' }, T: { val: t, unit: 'h' }, ask: 'km/h', answer: v,
+    unitNote: `Les unités sont des km et des h : le résultat sera directement en km/h.`,
+    division: { num: d, numU: 'km', den: t, denU: 'h', res: v, resU: 'km/h' } }, c);
+}
+function genL2(type) {
+  if (type === 'min') {
+    const o = R(MIN_OPTS), c = R(CTX2);
+    let vs = c.v.filter(v => v % o.k === 0); if (!vs.length) vs = [o.k * 10];
+    const v = R(vs), th = o.m / 60, d = r3(v * th), ttxt = o.txt || `${o.m} min`;
+    return mk({ level: 2, D: { val: d, unit: 'km' }, T: { val: o.m, unit: 'min', text: ttxt }, ask: 'km/h', answer: v,
+      unitNote: `Le temps est en minutes. Pour avoir des km/h, il faut d'abord le convertir en heures.`,
+      conversions: [{ from: ttxt, ans: th, unit: 'h', what: 'le temps en heures',
+        help: lines(o.txt ? `${ttxt}, c'est ${o.m} minutes.` : `Rappel : 1 h = 60 min.`, `On divise par 60 : ${o.m} ÷ 60 = ${fmt(th)}`, `Donc ${ttxt} = <b>${fmt(th)} h</b>`) }],
+      division: { num: d, numU: 'km', den: th, denU: 'h', res: v, resU: 'km/h' } }, c);
+  }
+  if (type === 'dech') {
+    const c = R(CTX2), t = R([1.5, 2.5, 0.5]);
+    let vs = c.v.filter(v => v % 2 === 0); if (!vs.length) vs = [20];
+    const v = R(vs), d = r3(v * t);
+    return mk({ level: 2, D: { val: d, unit: 'km' }, T: { val: t, unit: 'h' }, ask: 'km/h', answer: v,
+      unitNote: `Les unités sont des km et des h : le résultat sera en km/h.`,
+      division: { num: d, numU: 'km', den: t, denU: 'h', res: v, resU: 'km/h' } }, c);
+  }
+  const c = R(CTX2DEC), v = R(c.v), t = R([2, 3, 4]), d = r3(v * t);
+  return mk({ level: 2, D: { val: d, unit: 'km' }, T: { val: t, unit: 'h' }, ask: 'km/h', answer: v,
+    unitNote: `Les unités sont des km et des h : le résultat sera en km/h. Il peut avoir une virgule.`,
+    division: { num: d, numU: 'km', den: t, denU: 'h', res: v, resU: 'km/h' } }, c);
+}
+function genL3(type) {
+  if (type === 'a') {
+    const c = R(CTX3A), [d, t] = R(c.p), v = d / t;
+    return mk({ level: 3, D: { val: d, unit: 'm' }, T: { val: t, unit: 's' }, ask: 'm/s', answer: v,
+      unitNote: `Les unités sont des m et des s : le résultat sera en m/s.`,
+      division: { num: d, numU: 'm', den: t, denU: 's', res: v, resU: 'm/s' } }, c);
+  }
+  if (type === 'b') {
+    const c = R(CTX3B), t = R([2, 3]), d = c.v * t;
+    return mk({ level: 3, D: { val: d, unit: 'km' }, T: { val: t, unit: 'h' }, ask: 'm/s', answer: c.v / 3.6,
+      unitNote: `Les unités sont des km et des h : la division donnera des km/h. Ensuite, il faudra passer en m/s.`,
+      division: { num: d, numU: 'km', den: t, denU: 'h', res: c.v, resU: 'km/h' }, post: { op: '÷' } }, c);
+  }
+  if (type === 'c') {
+    const c = R(CTX3C), v = R(c.v), t = R([10, 20, 30, 40]), d = v * t;
+    return mk({ level: 3, D: { val: d, unit: 'm' }, T: { val: t, unit: 's' }, ask: 'km/h', answer: r3(v * 3.6),
+      unitNote: `Les unités sont des m et des s : la division donnera des m/s. Ensuite, il faudra passer en km/h.`,
+      division: { num: d, numU: 'm', den: t, denU: 's', res: v, resU: 'm/s' }, post: { op: '×' } }, c);
+  }
+  const c = R(CTX3D), tm = R([2, 5, 10]), dm = c.v * tm * 60, dkm = dm / 1000;
+  return mk({ level: 3, D: { val: dkm, unit: 'km' }, T: { val: tm, unit: 'min' }, ask: 'm/s', answer: c.v,
+    unitNote: `On veut des m/s. Il faut donc la distance en mètres et le temps en secondes.`,
+    conversions: [
+      { from: `${fmt(dkm)} km`, ans: dm, unit: 'm', what: 'la distance en mètres', help: lines(`Rappel : 1 km = 1 000 m.`, `On multiplie par 1 000 : ${fmt(dkm)} × 1 000 = ${fmt(dm)}`, `Donc ${fmt(dkm)} km = <b>${fmt(dm)} m</b>`) },
+      { from: `${tm} min`, ans: tm * 60, unit: 's', what: 'le temps en secondes', help: lines(`Rappel : 1 min = 60 s.`, `On multiplie par 60 : ${tm} × 60 = ${tm * 60}`, `Donc ${tm} min = <b>${tm * 60} s</b>`) },
+    ],
+    division: { num: dm, numU: 'm', den: tm * 60, denU: 's', res: c.v, resU: 'm/s' } }, c);
+}
+const PLAN = { 2: ['dech', 'min', 'decv', 'min'], 3: ['a', 'c', 'b', 'd', 'a', 'b', 'c', 'd'] };
+let lastKey = '';
+function genQuestion(level, n) {
+  let q, tries = 0;
+  do {
+    q = level === 1 ? genL1() : level === 2 ? genL2(PLAN[2][n % 4]) : genL3(PLAN[3][n % 8]);
+    tries++;
+  } while (q.D.text + q.T.text === lastKey && tries < 20);
+  lastKey = q.D.text + q.T.text;
+  return q;
+}
+
+/* ---------- Son ---------- */
+let AC = null, muted = store.get('auraRush.muted') === '1';
+function tone(freqs, type = 'sine', dur = .14, gap = .09, vol = .07) {
+  if (muted) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = AC.createOscillator(), g = AC.createGain(), t0 = AC.currentTime + i * gap;
+      o.type = type; o.frequency.value = f;
+      g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(.0001, t0 + dur);
+      o.connect(g).connect(AC.destination); o.start(t0); o.stop(t0 + dur + .02);
+    });
+  } catch (e) {}
+}
+const sfx = {
+  good: () => tone([523, 659, 784, 1047], 'triangle', .2, .08),
+  bad: () => tone([311, 233, 155], 'sawtooth', .28, .13, .05),
+  click: () => tone([880], 'square', .05, 0, .025),
+  level: () => tone([392, 523, 659, 784, 1047], 'triangle', .22, .1),
+  ok: () => tone([660, 990], 'sine', .12, .07),
+  tick: () => tone([1200], 'square', .04, 0, .02),
+};
+
+/* ---------- État ---------- */
+const S = { name: '', hood: HOODS[0], skin: SKINS[0], hair: HAIRS[0], hs: 'court', start: 1,
+  level: 1, levelCount: 0, qn: 0, q: null, aura: 0, streak: 0, best: 0, perfect: 0, done: 0, history: [],
+  mood: 'neutral', Q: null, busy: false, timeLeft: GAME_MS, clockOn: false, over: false, lastTick: 0 };
+const cur = () => S.q;
+const look = () => ({ hood: S.hood, skin: S.skin, hair: S.hair, hs: S.hs });
+
+function show(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  $(id).classList.remove('hidden');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function toast(html, ms = 2000) {
+  const t = document.createElement('div'); t.className = 'toast'; t.innerHTML = html;
+  document.body.appendChild(t); setTimeout(() => t.remove(), ms);
+}
+
+/* ---------- Accueil ---------- */
+const homeChar = mountChar($('#home-char'));
+const gameChar = mountChar($('#g-char'));
+const endChar = mountChar($('#end-char'));
+function randomName() {
+  return R(['Turbo', 'Flash', 'Néon', 'Cosmo', 'Hyper', 'Méga', 'Nitro', 'Sonic']) + R(['Guépard', 'Faucon', 'Comète', 'Fusée', 'Éclair', 'Ninja', 'Dauphin', 'Lynx']) + Math.floor(Math.random() * 90 + 10);
+}
+function swatches(el, list, key) {
+  el.innerHTML = list.map(c => `<button class="sw ${c === S[key] ? 'sel' : ''}" data-c="${c}" style="background:${c}"></button>`).join('');
+  el.onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; S[key] = b.dataset.c; sfx.click(); initHome(); };
+}
+function initHome() {
+  $('#hs-list').innerHTML = HAIRSTYLES.map(([k, l]) => `<button class="hs-btn ${k === S.hs ? 'sel' : ''}" data-h="${k}">${l}</button>`).join('');
+  swatches($('#sw-hood'), HOODS, 'hood'); swatches($('#sw-skin'), SKINS, 'skin'); swatches($('#sw-hair'), HAIRS, 'hair');
+  $('#levels').innerHTML = [1, 2, 3].map(l => `
+    <button class="lvl-card ${l === S.start ? 'sel' : ''}" data-l="${l}">
+      <div class="font-display font-extrabold text-sm" style="color:${LEVELS[l].color}">NIVEAU ${l}</div>
+      <div class="text-xs text-slate-300 mt-1">${LEVELS[l].sub}</div>
+    </button>`).join('');
+  $('#home-ladder').innerHTML = TIERS.map(t => `<div class="ladder-row"><span>${t.icon} <b style="background:${t.bg};-webkit-background-clip:text;background-clip:text;color:transparent">${t.name}</b></span><span class="text-xs text-slate-400">${t.min === -Infinity ? '< 0' : fmt(t.min) + '+'}</span></div>`).join('');
+  const rec = parseInt(store.get('auraRush.record'));
+  $('#home-record').innerHTML = isNaN(rec) ? `🏅 Pas encore de record perso sur cet appareil.` : `🏅 Record perso sur cet appareil : <b class="text-amber-300 font-display">${fmt(rec)}</b> d'aura`;
+  setChar(homeChar, { ...look(), mood: 'happy', aura: 3200 });
+}
+$('#hs-list').addEventListener('click', e => { const b = e.target.closest('[data-h]'); if (!b) return; S.hs = b.dataset.h; sfx.click(); initHome(); });
+$('#levels').addEventListener('click', e => { const b = e.target.closest('[data-l]'); if (!b) return; S.start = +b.dataset.l; sfx.click(); initHome(); });
+$('#btn-dice').onclick = () => { $('#in-name').value = randomName(); sfx.click(); };
+$('#btn-start').onclick = startGame;
+$('#in-name').addEventListener('keydown', e => { if (e.key === 'Enter') startGame(); });
+$('#btn-mute').onclick = () => { muted = !muted; $('#btn-mute').textContent = muted ? '🔇' : '🔊'; store.set('auraRush.muted', muted ? '1' : '0'); };
+$('#btn-mute').textContent = muted ? '🔇' : '🔊';
+
+/* ---------- Démarrage / briefing / chrono ---------- */
+function startGame() {
+  S.name = ($('#in-name').value.trim() || randomName()).slice(0, 16);
+  $('#in-name').value = S.name;
+  Object.assign(S, { level: S.start, levelCount: 0, qn: 0, aura: 0, streak: 0, best: 0, perfect: 0, done: 0, history: [],
+    mood: 'neutral', busy: false, timeLeft: GAME_MS, clockOn: false, over: false });
+  $('#hud-name').textContent = S.name; $('#aura-val').textContent = '0';
+  renderClock(); renderHUD(); renderDots(); showBrief(S.level, true);
+}
+const STEPS_HTML = `<ol class="list-decimal ml-6 mt-2 space-y-1">
+  <li>🔍 Je <b>repère</b> la <span class="hl-d">distance</span> et le <span class="hl-t">temps</span>. Attention aux pièges !</li>
+  <li>➗ Je <b>pose</b> la division : la distance divisée par le temps.</li>
+  <li>🧮 Je <b>calcule</b> le résultat avec la calculatrice.</li></ol>`;
+const BRIEF = {
+  1: `
+    <div class="card-soft"><b>⏱ 4 minutes</b> pour enchaîner un max de questions.<br>Chaque question se fait en étapes :${STEPS_HTML}</div>
+    <div class="card-soft"><b>💡 Exemple</b>
+      <p class="mt-2 italic text-slate-300">« En 3 h, un vélo parcourt 45 km. »</p>
+      <table class="tbl mt-2">
+        <tr><td>📏 Distance</td><td><span class="hl-d">45 km</span></td></tr>
+        <tr><td>⏱ Temps</td><td><span class="hl-t">3 h</span></td></tr>
+        <tr><td>➗ Calcul</td><td>45 ÷ 3 = 15</td></tr>
+        <tr><td>🚀 Vitesse</td><td><b class="text-amber-300">15 km/h</b></td></tr>
+      </table>
+      <p class="text-slate-400 text-sm mt-2">15 km/h, ça veut dire : 15 km parcourus en 1 heure.</p></div>
+    <div class="card-soft"><b>🧮 Calculatrice autorisée.</b> Elle est toujours à côté de la question.</div>
+    <div class="card-soft"><b>⚡ Pour un max d'aura :</b> zéro faute et une longue série 🔥.</div>`,
+  2: `
+    <div class="card-soft"><b>⚠️ Nouveau piège :</b> le temps peut être en <b>minutes</b>.<br>Pour avoir des km/h, il faut un temps en <b>heures</b>.<br>Une étape « Convertis » t'aidera.</div>
+    <div class="card-soft"><b>🔁 Des minutes aux heures</b>
+      <p class="text-sm text-slate-300 mt-1">On divise le nombre de minutes par 60.</p>
+      <table class="tbl mt-2">
+        <tr class="text-slate-400 text-sm"><td>En minutes</td><td>En heures</td></tr>
+        <tr><td>30 min</td><td>0,5 h</td></tr>
+        <tr><td>15 min</td><td>0,25 h</td></tr>
+        <tr><td>45 min</td><td>0,75 h</td></tr>
+        <tr><td>1 h 30 min</td><td>1,5 h</td></tr>
+      </table></div>
+    <div class="card-soft"><b>🔢 Virgules :</b> écris par exemple <b>4,5</b>.</div>`,
+  3: `
+    <div class="card-soft"><b>🚀 Nouvelle unité : le m/s</b> (mètre par seconde).<br>Si la distance est en <b>mètres</b> et le temps en <b>secondes</b>, la vitesse est en <b>m/s</b>.</div>
+    <div class="card-soft"><b>🔁 Changer d'unité de vitesse</b>
+      <table class="tbl mt-2">
+        <tr class="text-slate-400 text-sm"><td>Pour passer…</td><td>On fait</td></tr>
+        <tr><td>des m/s aux km/h</td><td><b class="text-amber-300">× 3,6</b></td></tr>
+        <tr><td>des km/h aux m/s</td><td><b class="text-amber-300">÷ 3,6</b></td></tr>
+      </table>
+      <p class="text-sm text-slate-400 mt-2">Pourquoi 3,6 ? À 1 m/s, on parcourt 3 600 m en une heure, c'est-à-dire 3,6 km.</p></div>
+    <div class="card-soft"><b>📏 Rappels</b>
+      <ul class="mt-1 space-y-0.5"><li>1 km = 1 000 m</li><li>1 min = 60 s</li><li>1 h = 3 600 s</li></ul></div>`,
+};
+function showBrief(level, first) {
+  S.clockOn = false; closeCalc();
+  $('#brief-kicker').textContent = first ? 'Le chrono démarre quand tu cliques' : '🔓 Niveau débloqué ! Chrono en pause';
+  $('#brief-title').textContent = LEVELS[level].name; $('#brief-title').style.color = LEVELS[level].color;
+  $('#brief-sub').innerHTML = LEVELS[level].sub + (first ? '' : `<br>Chaque question rapporte ${BASE[level]} points.`);
+  $('#brief-body').innerHTML = BRIEF[level];
+  show('#screen-brief'); sfx.level();
+}
+$('#btn-brief-go').onclick = () => { show('#screen-game'); S.lastTick = performance.now(); S.clockOn = true; newQuestion(); };
+
+function renderClock() {
+  const s = Math.max(0, Math.ceil(S.timeLeft / 1000));
+  $('#clock').textContent = `⏱ ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+  $('#clock').classList.toggle('urgent', s <= 30);
+}
+let lastSec = -1;
+setInterval(() => {
+  const now = performance.now();
+  if (S.clockOn && !S.over) {
+    S.timeLeft -= now - S.lastTick;
+    const s = Math.ceil(S.timeLeft / 1000);
+    if (s !== lastSec) { lastSec = s; renderClock(); if (s <= 10 && s > 0) sfx.tick(); }
+    if (S.timeLeft <= 0) timeUp();
+  }
+  S.lastTick = now;
+}, 200);
+function timeUp() {
+  S.over = true; S.clockOn = false; S.timeLeft = 0; renderClock(); closeCalc();
+  document.querySelectorAll('#steps input, #steps button').forEach(x => x.disabled = true);
+  const o = document.createElement('div'); o.className = 'timeup'; o.innerHTML = `<div>⏰ TEMPS ÉCOULÉ !<br><span style="font-size:.45em;color:#fff">${fmt(S.aura)} d'aura</span></div>`;
+  document.body.appendChild(o); sfx.level();
+  setTimeout(() => { o.remove(); endGame(); }, 2200);
+}
+
+/* ---------- HUD ---------- */
+const multOf = s => 1 + 0.25 * Math.min(Math.max(s - 1, 0), 4);
+function setMood(m) {
+  S.mood = m;
+  const r = { fire: 1, happy: .95, neutral: .8, focus: .8, worried: .5, sad: .2 }[m] ?? .8;
+  const rr = S.aura < 0 ? Math.min(r, .4) : r;
+  document.documentElement.style.setProperty('--r', rr.toFixed(2));
+  $('#stage').style.filter = `saturate(${(0.35 + 0.65 * rr).toFixed(2)}) brightness(${(0.75 + 0.25 * rr).toFixed(2)})`;
+  setChar(gameChar, { ...look(), mood: m, aura: S.aura });
+}
+function renderHUD() {
+  const i = tierIdx(S.aura), t = TIERS[i], nx = TIERS[i + 1];
+  $('#hud-tier').textContent = `${t.icon} ${t.name}`; $('#hud-tier').style.background = t.bg;
+  $('#aura-val').style.color = S.aura < 0 ? '#c4b5fd' : '#fde047';
+  if (nx) {
+    const lo = t.min === -Infinity ? Math.min(S.aura, -300) : t.min;
+    $('#next-label').innerHTML = `Prochain rang : ${nx.icon} ${nx.name}`;
+    $('#next-left').textContent = `encore ${fmt(nx.min - S.aura)}`;
+    $('#next-fill').style.width = Math.max(0, Math.min(100, (S.aura - lo) / (nx.min - lo) * 100)) + '%';
+    $('#next-fill').style.background = nx.bg;
+  } else {
+    $('#next-label').textContent = 'Rang max… mais l\'aura n\'a pas de limite !';
+    $('#next-left').textContent = '♾️'; $('#next-fill').style.width = '100%'; $('#next-fill').style.background = t.bg;
+  }
+  $('#hud-streak').textContent = '🔥' + S.streak;
+  $('#hud-done').textContent = S.done;
+  $('#hud-next').textContent = '+' + Math.round(BASE[S.level] * multOf(S.streak + 1));
+  $('#hud-next').title = `Ce que rapporte la prochaine question réussie sans faute (série ×${fmt(multOf(S.streak + 1))})`;
+  setMood(S.mood);
+}
+function changeAura(delta) {
+  const before = tierIdx(S.aura), from = S.aura;
+  S.aura += delta;
+  animateNumber($('#aura-val'), from, S.aura, 900);
+  const pop = document.createElement('div');
+  pop.className = 'aura-pop'; pop.textContent = (delta > 0 ? '+' : '−') + fmt(Math.abs(delta));
+  pop.style.color = delta > 0 ? '#fde047' : '#f87171';
+  $('#aura-pop-host').appendChild(pop); setTimeout(() => pop.remove(), 1500);
+  renderHUD();
+  if (delta > 0) charAnim($('#g-char'), 'powerup');
+  const after = tierIdx(S.aura);
+  if (after !== before) {
+    const t = TIERS[after];
+    if (after > before) burst(['⭐', '✨', t.icon], 26);
+    setTimeout(() => toast(`${after > before ? '⬆️ RANG UP' : '⬇️ RANG PERDU'} · ${t.icon} <span style="background:${t.bg};-webkit-background-clip:text;background-clip:text;color:transparent">${t.name}</span>`, 2400), 400);
+  }
+}
+function animateNumber(el, from, to, ms) {
+  const t0 = performance.now();
+  const step = now => { const k = Math.min(1, (now - t0) / ms); el.textContent = fmt(Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)))); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+let bubbleT = 0;
+function say(text, kind = '') {
+  const b = $('#bubble'); b.className = 'bubble on ' + kind; b.innerHTML = text;
+  clearTimeout(bubbleT); bubbleT = setTimeout(() => b.classList.remove('on'), 2600);
+}
+function renderDots() {
+  $('#dots').innerHTML = S.history.slice(-24).map(r => `<span class="dot ${r}"></span>`).join('');
+}
+function glowUp() {
+  const c = $('#qcard'); c.classList.remove('glowup'); void c.offsetWidth; c.classList.add('glowup');
+  const f = $('#flash'); f.className = ''; void f.offsetWidth; f.className = 'good';
+  charAnim($('#g-char'), 'jump'); burst(['✨', '⚡', '💫', '🔥', '⭐'], 20);
+}
+function crash() {
+  const f = $('#flash'); f.className = ''; void f.offsetWidth; f.className = 'bad';
+  charAnim($('#g-char'), 'hit');
+}
+function burst(chars, n) {
+  const rc = $('#g-char').getBoundingClientRect();
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('span'); s.className = 'particle'; s.textContent = R(chars);
+    s.style.left = (rc.left + rc.width / 2) + 'px'; s.style.top = (rc.top + rc.height / 2) + 'px';
+    const a = Math.random() * Math.PI * 2, d = 90 + Math.random() * 200;
+    s.style.setProperty('--dx', Math.cos(a) * d + 'px'); s.style.setProperty('--dy', Math.sin(a) * d + 'px');
+    document.body.appendChild(s); setTimeout(() => s.remove(), 1100);
+  }
+}
+
+/* =========================================================
+   QUESTION GUIDÉE : repérer → (convertir) → poser → calculer → (changer d'unité)
+   ========================================================= */
+function stmtHTML(q, mode, found = {}) {
+  return q.parts.map(p => {
+    if (typeof p === 'object') {
+      if ((p.k === 'D' || p.k === 'T') && (mode === 'hl' || found[p.k])) return `<span class="${p.k === 'D' ? 'hl-d' : 'hl-t'}">${p.t}</span>`;
+      if (mode === 'click') return `<span class="tok" data-k="${p.k}">${p.t}</span>`;
+      return p.t;
+    }
+    if (mode === 'click') return p.split(/(\s+)/).map(w => (!w || /^\s+$/.test(w) || /^[.,]$/.test(w)) ? w : `<span class="tok" data-k="X">${w}</span>`).join('');
+    return p;
+  }).join('');
+}
+function newQuestion() {
+  if (S.over) return;
+  S.q = genQuestion(S.level, S.qn); S.qn++;
+  const q = S.q, L = LEVELS[q.level];
+  S.Q = { steps: ['data', ...q.conversions.map((_, i) => 'conv' + i), 'pose', 'calc', ...(q.post ? ['post'] : [])],
+          si: 0, errors: 0, stepErr: 0, found: {}, op: null, helped: {} };
+  S.busy = false;
+  $('#lvl-tag').textContent = L.name; $('#lvl-tag').style.color = L.color;
+  $('#q-count').textContent = `Question ${S.qn}`;
+  $('#q-ask').innerHTML = q.askHTML;
+  closeCalc();
+  $('#feedback').classList.add('hidden'); $('#btn-next').classList.add('hidden');
+  renderHUD(); renderSteps();
+  setMood(S.streak >= 3 ? 'fire' : S.aura < 0 ? 'worried' : 'focus');
+  say(S.streak >= 3 ? `Série de ${S.streak}, on lâche rien 🔥` : R([`Let's go 💪`, `Facile pour nous 😏`, `Attention aux pièges 👀`, `Concentration… 🧠`]));
+}
+function stepTitle(q, k) {
+  if (k === 'data') return '🔍 Repère les données';
+  if (k.startsWith('conv')) return `🔁 Convertis ${q.conversions[+k.slice(4)].what}`;
+  if (k === 'pose') return '➗ Pose le calcul de la vitesse';
+  if (k === 'calc') return '🧮 Calcule';
+  return `🔁 Passe la vitesse en ${q.ask}`;
+}
+function stepDone(q, k) {
+  const dv = q.division;
+  if (k === 'data') return `<div class="flex flex-wrap gap-2"><span class="chip chip-d">Distance : ${q.D.text}</span><span class="chip chip-t">Temps : ${q.T.text}</span></div><div class="text-sm text-slate-400 mt-2">🧪 ${q.unitNote}</div>`;
+  if (k.startsWith('conv')) return q.conversions[+k.slice(4)].help;
+  if (k === 'pose') return `v = <span class="hl-d">${fmt(dv.num)} ${dv.numU}</span> ÷ <span class="hl-t">${fmt(dv.den)} ${dv.denU}</span>`;
+  if (k === 'calc') return `v = ${fmt(dv.num)} ÷ ${fmt(dv.den)} = <b class="text-white">${fmt(dv.res)} ${dv.resU}</b>`;
+  return `${fmt(dv.res)} ${dv.resU} ${q.post.op} 3,6 = <b class="text-white">${fmt(q.answer)} ${q.ask}</b>`;
+}
+function stepActive(q, k) {
+  const dv = q.division, Q = S.Q;
+  const ok = `<button id="st-ok" class="btn-cyan">Valider ⏎</button>`;
+  if (k === 'data') return `
+    <div class="text-slate-200">👆 Clique dans l'énoncé sur ${!Q.found.D ? `la <b class="text-sky-300">DISTANCE</b> (une longueur)` : `le <b class="text-orange-300">TEMPS</b> (une durée)`}.</div>
+    <div class="flex flex-wrap gap-2 mt-2"><span class="chip chip-d">Distance : ${Q.found.D ? q.D.text : '?'}</span><span class="chip chip-t">Temps : ${Q.found.T ? q.T.text : '?'}</span></div>`;
+  if (k.startsWith('conv')) {
+    const c = q.conversions[+k.slice(4)];
+    return `<div class="flex flex-wrap items-center gap-2 font-display font-bold"><span>${c.from} =</span><input id="in-a" class="mini-in" inputmode="decimal" autocomplete="off" placeholder="?"><span class="u text-amber-300">${c.unit}</span>${ok}</div>`;
+  }
+  if (k === 'pose') return `
+    <div class="text-sm text-slate-400 mb-2">Écris les nombres et choisis l'opération.<br>Rappel : la vitesse, c'est la <b class="text-sky-300">distance</b> divisée par le <b class="text-orange-300">temps</b>.${q.conversions.length ? '<br>Utilise les valeurs converties !' : ''}</div>
+    <div class="flex flex-wrap items-center gap-2 font-display font-bold text-lg">
+      <span>v =</span>
+      <input id="in-a" class="mini-in in-d" inputmode="decimal" autocomplete="off" placeholder="?"><span class="u text-sky-300">${dv.numU}</span>
+      <span class="flex gap-1" id="ops"><button class="op-btn" data-op="÷">÷</button><button class="op-btn" data-op="×">×</button></span>
+      <input id="in-b" class="mini-in in-t" inputmode="decimal" autocomplete="off" placeholder="?"><span class="u text-orange-300">${dv.denU}</span>
+      ${ok}
+    </div>`;
+  if (k === 'calc') return `
+    <div class="flex flex-wrap items-center gap-2 font-display font-bold text-lg">
+      <span>v = <span class="text-sky-300">${fmt(dv.num)}</span> ÷ <span class="text-orange-300">${fmt(dv.den)}</span> =</span>
+      <input id="in-a" class="mini-in" inputmode="decimal" autocomplete="off" placeholder="?"><span class="u text-amber-300">${dv.resU}</span>${ok}
+    </div><div class="text-xs text-slate-400 mt-1">🧮 Utilise la calculatrice à côté.</div>`;
+  return `
+    <div class="text-sm text-slate-400 mb-2">Tu as la vitesse en ${dv.resU}.<br>On la veut en <b class="text-amber-300">${q.ask}</b> : faut-il multiplier ou diviser par 3,6 ?</div>
+    <div class="flex flex-wrap items-center gap-2 font-display font-bold text-lg">
+      <span>${fmt(dv.res)} ${dv.resU}</span>
+      <span class="flex gap-1" id="ops"><button class="op-btn" data-op="×">×</button><button class="op-btn" data-op="÷">÷</button></span>
+      <span>3,6 =</span><input id="in-a" class="mini-in" inputmode="decimal" autocomplete="off" placeholder="?"><span class="u text-amber-300">${q.ask}</span>${ok}
+    </div>`;
+}
+function renderSteps() {
+  const q = cur(), Q = S.Q;
+  $('#q-text').innerHTML = stmtHTML(q, Q.si === 0 ? 'click' : 'hl', Q.found);
+  $('#steps').innerHTML = Q.steps.map((k, i) => {
+    const st = i < Q.si ? 'done' : i === Q.si ? 'active' : 'todo';
+    return `<div class="step ${st}">
+      <div class="step-num">${st === 'done' ? '✔' : i + 1}</div>
+      <div class="step-main">
+        <div class="step-title">${stepTitle(q, k)} ${Q.helped[i] ? '<span class="text-xs text-sky-300 font-normal">(aidé)</span>' : ''}</div>
+        ${st === 'todo' ? '' : `<div class="mt-1">${st === 'done' ? stepDone(q, k) : stepActive(q, k)}</div>`}
+        ${st === 'active' ? '<div id="st-fb" class="text-sm mt-2"></div>' : ''}
+      </div></div>`;
+  }).join('');
+  const ops = $('#ops');
+  if (ops) ops.onclick = e => { const b = e.target.closest('[data-op]'); if (!b) return; S.Q.op = b.dataset.op; sfx.click(); ops.querySelectorAll('.op-btn').forEach(x => x.classList.toggle('sel', x === b)); };
+  if ($('#st-ok')) $('#st-ok').onclick = checkStep;
+  document.querySelectorAll('#steps input').forEach(inp => {
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); checkStep(); } });
+    inp.addEventListener('focus', () => { lastInput = inp; });
+  });
+  lastInput = $('#steps .active input');
+  setTimeout(() => { const f = $('#steps .active input'); if (f) f.focus({ preventScroll: true }); }, 60);
+}
+function stepFb(html) { const f = $('#st-fb'); if (f) f.innerHTML = html; }
+
+/* Clic dans l'énoncé (étape 1) */
+$('#q-text').addEventListener('click', e => {
+  const Q = S.Q; if (!Q || Q.steps[Q.si] !== 'data' || S.busy || S.over) return;
+  const tok = e.target.closest('.tok'); if (!tok) return;
+  const want = !Q.found.D ? 'D' : 'T', k = tok.dataset.k;
+  if (k === want) {
+    Q.found[k] = true; sfx.ok();
+    if (Q.found.D && Q.found.T) { say(R([`Bien vu 👀`, `Données trouvées ✔`])); stepOK(); }
+    else renderSteps();
+    return;
+  }
+  tok.classList.add('bad'); setTimeout(() => tok.classList.remove('bad'), 500);
+  let msg;
+  if (k === 'H') msg = want === 'T'
+    ? `✘ Piège ! « ${tok.textContent} », c'est l'<b>heure de départ</b> (un moment de la journée), pas une durée. Cherche <b>combien de temps</b> dure le trajet.`
+    : `✘ « ${tok.textContent} », c'est une heure de départ, pas une distance !`;
+  else if (k === 'N') msg = `✘ Piège ! C'est un nombre de passagers, ça n'a rien à voir avec ${want === 'D' ? 'la distance' : 'le temps'}.`;
+  else if (want === 'D' && k === 'T') msg = `✘ Ça, c'est une <b>durée</b> (le temps) ! La distance est une <b>longueur</b> (km ou m).`;
+  else if (want === 'D') msg = `✘ Indice : une distance s'écrit avec une unité de longueur (<b>km</b> ou <b>m</b>).`;
+  else msg = `✘ Indice : un temps s'écrit avec une unité de durée (<b>h</b>, <b>min</b> ou <b>s</b>).`;
+  stepFb(`<span class="text-rose-300">${msg}</span>`);
+});
+
+function calcHint(a, b, x, q) {
+  if (close(x, a * b)) return `Tu as <b>multiplié</b> ! Ici on <b>divise</b> : ${fmt(a)} ÷ ${fmt(b)}.`;
+  if (close(x, b / a)) return `Tu as fait ${fmt(b)} ÷ ${fmt(a)} : c'est <b>l'inverse</b> !`;
+  const r = a / b;
+  if ([10, 100, .1, .01].some(f => close(x, r * f))) return `Attention à la <b>virgule</b> : ton résultat est 10 ou 100 fois trop grand ou trop petit.`;
+  return `Erreur de calcul. Tape bien <b>${fmt(a)} ÷ ${fmt(b)}</b> dans la calculatrice 🧮, puis appuie sur =.`;
+}
+function checkStep() {
+  if (S.busy || S.over) return;
+  const q = cur(), Q = S.Q, k = Q.steps[Q.si], dv = q.division;
+  const val = id => $(id) ? parseNum($(id).value) : NaN;
+  if (k.startsWith('conv')) {
+    const c = q.conversions[+k.slice(4)], x = val('#in-a');
+    if (isNaN(x)) return stepFb(`<span class="text-sky-300">✏️ Écris un nombre (ex : 0,5).</span>`);
+    if (close(x, c.ans)) return stepOK();
+    const hint = c.unit === 'h' ? `<br>Rappel : 1 h = 60 min.<br>Pour passer des minutes aux heures, on <b>divise par 60</b>.`
+      : c.unit === 'm' ? `<br>Rappel : 1 km = 1 000 m.<br>Pour passer des km aux m, on <b>multiplie par 1 000</b>.` : `<br>Rappel : 1 min = 60 s.<br>Pour passer des minutes aux secondes, on <b>multiplie par 60</b>.`;
+    return stepFail(`✘ Pas tout à fait. ${hint}`);
+  }
+  if (k === 'pose') {
+    const a = val('#in-a'), b = val('#in-b');
+    if (!Q.op) return stepFb(`<span class="text-sky-300">✏️ Choisis l'opération : <b>÷</b> ou <b>×</b> ?</span>`);
+    if (isNaN(a) || isNaN(b)) return stepFb(`<span class="text-sky-300">✏️ Remplis les deux cases avec des nombres.</span>`);
+    if (Q.op === '÷' && close(a, dv.num) && close(b, dv.den)) return stepOK();
+    let msg;
+    if (Q.op !== '÷') msg = `✘ Mauvaise opération !<br>Une vitesse, c'est une distance <b>partagée</b> par un temps : combien de km <b>par</b> heure.<br>Il faut donc <b>diviser</b>.`;
+    else if (close(a, dv.den) && close(b, dv.num)) msg = `✘ Tu as <b>inversé</b> ! La <b class="text-sky-300">distance</b> se met en premier, puis on divise par le <b class="text-orange-300">temps</b>.`;
+    else if (q.conversions.length && (close(a, q.D.val) || close(b, q.T.val))) msg = `✘ Utilise les valeurs <b>converties</b> (en ${dv.numU} et en ${dv.denU}), pas celles de l'énoncé !`;
+    else msg = `✘ Vérifie tes nombres : ce sont la distance et le temps repérés à l'étape 1.`;
+    return stepFail(msg);
+  }
+  if (k === 'calc') {
+    const x = val('#in-a');
+    if (isNaN(x)) return stepFb(`<span class="text-sky-300">✏️ Écris un nombre (ex : 12,5).</span>`);
+    if (close(x, dv.res)) return stepOK();
+    return stepFail(`✘ ${calcHint(dv.num, dv.den, x, q)}`);
+  }
+  if (k === 'post') {
+    const x = val('#in-a');
+    if (!Q.op) return stepFb(`<span class="text-sky-300">✏️ Choisis : <b>×</b> ou <b>÷</b> 3,6 ?</span>`);
+    if (isNaN(x)) return stepFb(`<span class="text-sky-300">✏️ Écris un nombre.</span>`);
+    if (Q.op === q.post.op && close(x, q.answer)) return stepOK();
+    if (Q.op !== q.post.op) return stepFail(`✘ Mauvais sens !<br>Des m/s aux km/h, on fait <b>× 3,6</b>.<br>Des km/h aux m/s, on fait <b>÷ 3,6</b>.<br>Le nombre en km/h est toujours le plus grand.`);
+    return stepFail(`✘ Erreur de calcul : tape <b>${fmt(dv.res)} ${q.post.op} 3,6</b> dans la calculatrice 🧮.`);
+  }
+}
+
+const BURN = [`Aïe… mon aura 😩`, `Mon aura s'effondre 📉`, `J'ai perdu toute ma street cred 💀`, `Ça pique… 😵`, `Mon aura part en fumée 💨`];
+function stepFail(msg) {
+  const Q = S.Q, q = cur();
+  Q.errors++; Q.stepErr++;
+  const loss = Q.errors === 1 ? 300 : 100;
+  S.streak = 0; changeAura(-loss); setMood('sad'); crash(); sfx.bad();
+  say(`−${loss} AURA<br>${R(BURN)}`, 'bad');
+  const card = $('#steps .active'); if (card) { card.classList.remove('shake'); void card.offsetWidth; card.classList.add('shake'); }
+  if (Q.stepErr >= 2) {
+    S.busy = true; Q.helped[Q.si] = true;
+    stepFb(`<div class="text-rose-300">${msg}</div><div class="mt-2 card-soft" style="border-color:rgba(250,204,21,.4)">💡 <b>Je te montre :</b> ${stepDone(q, Q.steps[Q.si])}<div class="text-xs text-slate-400 mt-1">Lis bien, puis on continue…</div></div>`);
+    document.querySelectorAll('#steps .active input, #steps .active button').forEach(x => x.disabled = true);
+    setTimeout(() => { if (S.over || S.Q !== Q) return; S.busy = false; stepOK(true); }, 3000);
+  } else {
+    stepFb(`<div class="text-rose-300">${msg}</div><div class="text-xs text-slate-400 mt-1">Corrige et valide à nouveau.</div>`);
+  }
+}
+function stepOK(silent) {
+  const Q = S.Q;
+  if (!silent) { sfx.ok(); charAnim($('#g-char'), 'jump'); }
+  Q.si++; Q.stepErr = 0; Q.op = null;
+  if (S.mood === 'sad') setMood('worried'); else if (S.mood === 'worried' && !silent) setMood('focus');
+  if (Q.si >= Q.steps.length) return completeQuestion();
+  if (!silent && Q.steps[Q.si - 1] !== 'data') say(R([`Propre ✔`, `Ça avance 💪`, `Nickel 👌`, `Next ➜`]), 'good');
+  renderSteps();
+}
+function completeQuestion() {
+  const q = cur(), Q = S.Q;
+  renderSteps(); closeCalc();
+  S.done++; S.levelCount++;
+  let gain, title, detail;
+  if (Q.errors === 0) {
+    S.streak++; S.best = Math.max(S.best, S.streak); S.perfect++;
+    const mult = multOf(S.streak);
+    gain = Math.round(BASE[q.level] * mult);
+    title = S.streak >= 5 ? `👑 SÉRIE DE ${S.streak} · INTOUCHABLE` : S.streak >= 3 ? `🔥 SÉRIE DE ${S.streak} !` : R([`✨ GLOW-UP !`, `😎 SANS FAUTE`, `⚡ PROPRE.`, `💎 CLEAN.`]);
+    detail = `<table class="tbl"><tr><td>Points du niveau</td><td>${BASE[q.level]}</td></tr><tr><td>Bonus de série</td><td>× ${fmt(mult)}</td></tr><tr><td>Total</td><td><b class="text-amber-300">+${gain} d'aura</b></td></tr></table>`;
+    S.history.push('ok');
+    changeAura(gain); setMood(S.streak >= 3 ? 'fire' : 'happy'); glowUp(); sfx.good();
+    say(S.streak >= 3 ? `+${gain} AURA<br>JE SUIS EN FEU 🔥` : `+${gain} AURA ✨`, 'good');
+  } else {
+    gain = Math.round(BASE[q.level] * 0.5);
+    title = `💪 REMONTADA`; detail = `Question terminée avec ${Q.errors} erreur${Q.errors > 1 ? 's' : ''} : tu gagnes ${gain} d'aura.<br>Sans faute, tu aurais gagné au moins ${BASE[q.level]}, et ta série aurait continué.`;
+    S.history.push('mid');
+    changeAura(gain); setMood('neutral'); sfx.ok();
+    say(`On remonte 💪 +${gain}`, 'good');
+  }
+  renderDots();
+  const f = $('#feedback');
+  f.className = `mt-4 fb ${Q.errors === 0 ? 'fb-good' : 'fb-mid'}`;
+  f.innerHTML = `<div class="font-display font-black text-2xl ${Q.errors === 0 ? 'text-amber-300' : 'text-sky-300'}">${title}</div>
+    <div class="text-sm text-slate-300 mt-2">${detail}</div>
+    <div class="mt-2">✔ Réponse : <b class="text-white">${fmt(q.answer)} ${q.ask}</b></div>`;
+  f.classList.remove('hidden');
+  const b = $('#btn-next'); b.classList.remove('hidden'); setTimeout(() => b.focus({ preventScroll: true }), 50);
+}
+function next() {
+  if ($('#btn-next').classList.contains('hidden') || S.over) return;
+  sfx.click(); $('#btn-next').classList.add('hidden');
+  if (S.levelCount >= PER_LEVEL && S.level < 3) { S.level++; S.levelCount = 0; return showBrief(S.level, false); }
+  newQuestion(); window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$('#btn-next').onclick = next;
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' || e.target.id === 'btn-next') return;
+  if (!$('#screen-game').classList.contains('hidden') && !$('#btn-next').classList.contains('hidden')) { e.preventDefault(); next(); }
+});
+
+/* =========================================================
+   CALCULATRICE (autorisée quand il y a des nombres décimaux)
+   ========================================================= */
+let calcExpr = '', calcJustEq = false, lastInput = null;
+function calcEval(s) {
+  const toks = s.match(/\d+\.?\d*|\.\d+|[+−×÷]/g); if (!toks) return NaN;
+  const nums = [parseFloat(toks[0])], ops = [];
+  for (let i = 1; i < toks.length; i += 2) {
+    const op = toks[i], n = parseFloat(toks[i + 1]); if (isNaN(n)) break;
+    if (op === '×') nums[nums.length - 1] *= n; else if (op === '÷') nums[nums.length - 1] /= n; else { ops.push(op); nums.push(n); }
+  }
+  let r = nums[0]; ops.forEach((op, j) => { r = op === '+' ? r + nums[j + 1] : r - nums[j + 1]; });
+  return Math.round(r * 1e6) / 1e6;
+}
+const calcShow = () => { $('#calc-disp').textContent = calcExpr ? calcExpr.replace(/\./g, ',') : '0'; };
+$('#calc-keys').onclick = e => {
+  const b = e.target.closest('[data-k]'); if (!b) return; const k = b.dataset.k; sfx.click();
+  const isOp = /[+−×÷]/.test(k);
+  if (k === 'C') calcExpr = '';
+  else if (k === 'B') calcExpr = calcExpr.slice(0, -1);
+  else if (k === '=') { const r = calcEval(calcExpr); calcExpr = isFinite(r) ? String(r) : ''; calcJustEq = true; calcShow(); return; }
+  else if (isOp) { if (!calcExpr) return; if (/[+−×÷]$/.test(calcExpr)) calcExpr = calcExpr.slice(0, -1); calcExpr += k; }
+  else { if (calcJustEq) calcExpr = ''; if (k === '.' && /\.\d*$/.test(calcExpr.split(/[+−×÷]/).pop() + (calcExpr.endsWith('.') ? '.' : ''))) return; calcExpr += k; }
+  calcJustEq = false; calcShow();
+};
+$('#calc-ins').onclick = () => {
+  const r = calcEval(calcExpr);
+  const target = (lastInput && document.body.contains(lastInput) && !lastInput.disabled) ? lastInput : $('#steps .active input');
+  if (!isFinite(r) || !target) return;
+  target.value = fmt(r).replace(/\s/g, ''); target.focus(); sfx.ok();
+};
+function closeCalc() { calcExpr = ''; calcJustEq = false; calcShow(); }   // remet l'écran à zéro
+
+/* =========================================================
+   FIN : carte de résultat à capturer / partager
+   ========================================================= */
+function hexA(hex, a) { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; }
+function rrect(x, X, Y, w, h, r) { x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + w, Y, X + w, Y + h, r); x.arcTo(X + w, Y + h, X, Y + h, r); x.arcTo(X, Y + h, X, Y, r); x.arcTo(X, Y, X + w, Y, r); x.closePath(); }
+function svgImage(host) {
+  const svg = host.querySelector('svg').cloneNode(true);
+  svg.setAttribute('width', 400); svg.setAttribute('height', 520); svg.style.filter = '';
+  const src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(svg));
+  return new Promise(res => { const img = new Image(); img.onload = () => res(img); img.onerror = () => res(null); img.src = src; });
+}
+async function buildCard(mood) {
+  const W = 1080, H = 1350, cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+  const x = cv.getContext('2d'), t = tierOf(S.aura);
+  try { await Promise.race([Promise.all([document.fonts.load('900 60px Orbitron'), document.fonts.load('800 30px Inter')]), new Promise(r => setTimeout(r, 2000))]); } catch (e) {}
+  let g = x.createLinearGradient(0, 0, 0, H); g.addColorStop(0, '#0d1230'); g.addColorStop(1, '#05060d');
+  x.fillStyle = g; x.fillRect(0, 0, W, H);
+  const rg = x.createRadialGradient(W / 2, 520, 40, W / 2, 520, 640);
+  rg.addColorStop(0, hexA(S.aura < 0 ? '#7c3aed' : t.a1, .5)); rg.addColorStop(1, 'rgba(0,0,0,0)');
+  x.fillStyle = rg; x.fillRect(0, 0, W, H);
+  x.strokeStyle = hexA(t.a1, .85); x.lineWidth = 6; rrect(x, 24, 24, W - 48, H - 48, 44); x.stroke();
+  x.textAlign = 'center';
+  x.font = '900 88px Orbitron, sans-serif';
+  const tg = x.createLinearGradient(250, 0, 830, 0); tg.addColorStop(0, '#fde047'); tg.addColorStop(.5, '#f472b6'); tg.addColorStop(1, '#22d3ee');
+  x.fillStyle = tg; x.fillText('AURA RUSH', W / 2, 140);
+  x.font = '700 32px Inter, sans-serif'; x.fillStyle = '#94a3b8'; x.fillText('Défi vitesse en 4 minutes', W / 2, 192);
+  const img = await svgImage($('#end-char'));
+  if (img) { x.shadowColor = S.aura < 0 ? '#7c3aed' : t.a1; x.shadowBlur = 60; x.drawImage(img, W / 2 - 210, 215, 420, 546); x.shadowBlur = 0; }
+  x.font = '900 66px Orbitron, sans-serif'; x.fillStyle = '#fff'; x.fillText(S.name, W / 2, 830);
+  x.font = '800 34px Orbitron, sans-serif';
+  const label = `${t.icon}  ${t.name}`, tw = x.measureText(label).width + 70;
+  const pg = x.createLinearGradient(W / 2 - tw / 2, 0, W / 2 + tw / 2, 0); pg.addColorStop(0, t.a1); pg.addColorStop(1, t.a2 === '#020617' ? '#4c1d95' : t.a2);
+  x.fillStyle = pg; rrect(x, W / 2 - tw / 2, 860, tw, 66, 33); x.fill();
+  x.fillStyle = '#0b0b14'; x.fillText(label, W / 2, 906);
+  x.font = '900 150px Orbitron, sans-serif'; x.fillStyle = S.aura < 0 ? '#c4b5fd' : '#fde047';
+  x.shadowColor = x.fillStyle; x.shadowBlur = 40; x.fillText(fmt(S.aura).replace(/ /g, ' '), W / 2, 1080); x.shadowBlur = 0;
+  x.font = '800 32px Inter, sans-serif'; x.fillStyle = '#cbd5e1'; x.fillText("POINTS D'AURA", W / 2, 1126);
+  const stats = [[`${S.perfect}/${S.done}`, 'sans faute'], [`${S.best}`, 'série max 🔥'], [`N${S.level}`, 'niveau atteint']];
+  const bw = 280, gap = 26, sx = (W - (3 * bw + 2 * gap)) / 2;
+  stats.forEach(([v, l], i) => {
+    const bx = sx + i * (bw + gap);
+    x.fillStyle = 'rgba(255,255,255,.06)'; rrect(x, bx, 1160, bw, 110, 22); x.fill();
+    x.strokeStyle = 'rgba(255,255,255,.12)'; x.lineWidth = 2; x.stroke();
+    x.fillStyle = '#fff'; x.font = '900 46px Orbitron, sans-serif'; x.fillText(v, bx + bw / 2, 1215);
+    x.fillStyle = '#94a3b8'; x.font = '700 24px Inter, sans-serif'; x.fillText(l, bx + bw / 2, 1250);
+  });
+  x.font = '600 26px Inter, sans-serif'; x.fillStyle = '#64748b';
+  x.fillText(`${new Date().toLocaleDateString('fr-FR')}  ·  Qui fera mieux ? 😏`, W / 2, 1306);
+  return cv;
+}
+async function endGame() {
+  S.clockOn = false; S.over = true; closeCalc();
+  const acc = S.done ? S.perfect / S.done : 0;
+  const mood = S.aura < 0 ? 'sad' : acc >= .8 && S.done >= 3 ? 'fire' : acc >= .5 ? 'happy' : acc >= .25 ? 'neutral' : 'sad';
+  const rec = parseInt(store.get('auraRush.record'));
+  const isRec = isNaN(rec) || S.aura > rec;
+  if (isRec) store.set('auraRush.record', String(S.aura));
+  $('#end-record').innerHTML = isRec ? `<span class="text-amber-300">🏅 NOUVEAU RECORD PERSO !</span>` : `<span class="text-slate-400">Record perso : ${fmt(rec)}</span>`;
+  setChar(endChar, { ...look(), mood, aura: S.aura });
+  $('#card-img').classList.add('hidden'); $('#card-wait').classList.remove('hidden');
+  show('#screen-end'); sfx.level();
+  const cv = await buildCard(mood);
+  const url = cv.toDataURL('image/png');
+  $('#card-img').src = url; $('#card-img').classList.remove('hidden'); $('#card-wait').classList.add('hidden');
+  const fname = `aura-rush-${S.name.replace(/[^\w-]+/g, '_')}.png`;
+  $('#btn-dl').href = url; $('#btn-dl').download = fname;
+  cv.toBlob(blob => {
+    const file = blob && new File([blob], fname, { type: 'image/png' });
+    const can = file && navigator.canShare && navigator.canShare({ files: [file] });
+    $('#btn-share').classList.toggle('hidden', !can);
+    $('#btn-share').onclick = () => navigator.share({ files: [file], title: 'Aura Rush', text: `J'ai fait ${fmt(S.aura)} d'aura sur Aura Rush ! Qui fera mieux ? 😏` }).catch(() => {});
+  });
+}
+$('#btn-replay').onclick = () => startGame();
+$('#btn-home').onclick = () => { initHome(); show('#screen-home'); };
+
+/* ---------- Init ---------- */
+initHome();
+</script>
+</body>
+</html>
